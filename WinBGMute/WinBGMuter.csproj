@@ -19,6 +19,9 @@
     <DebugType>portable</DebugType>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="res\bgm_muted.ico" />
   </ItemGroup>
   <ItemGroup>

@@ -24,6 +24,10 @@ You can add exceptions for which applications are never muted.
 # Requirements
 * Requires DotNet 8.0 to work (install here https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 
+# Development
+* Nullable reference types are enabled and Roslyn analyzers run with the `latest-recommended` ruleset (see `Directory.Build.props`).
+* Formatting defaults are enforced via `.editorconfig` (spaces, 4-space indents for C#, sorted `using` directives).
+
 # Getting Started
  - Download **WinBGMuter.zip** from the [Releases](https://github.com/nefares/Background-Muter/releases/latest) page, extract it and open the extracted folder (see image below)
  - Run **WinBGMuter.exe**. The application will automatically start muting background processes with default settings.
