@@ -94,5 +94,17 @@ namespace WinBGMuter.Properties {
                 this["IsMuteConditionBackground"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool EnableMuting {
+            get {
+                return ((bool)(this["EnableMuting"]));
+            }
+            set {
+                this["EnableMuting"] = value;
+            }
+        }
     }
 }

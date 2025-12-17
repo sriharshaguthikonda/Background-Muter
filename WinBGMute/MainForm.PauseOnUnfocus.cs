@@ -14,6 +14,7 @@ namespace WinBGMuter
         private PauseOnUnfocusSettings? _pauseSettings;
 
         private CheckBox? _pauseOnUnfocusCheckbox;
+        private CheckBox? _enableMutingCheckbox;
         private ComboBox? _pauseModeComboBox;
         private GroupBox? _pauseSettingsGroupBox;
 
@@ -57,33 +58,61 @@ namespace WinBGMuter
                 return;
             }
 
-            // Create the group box for pause settings
+            // Create a compact panel for audio control options
+            // Add to LogTextBox's parent area (below log) for better visibility
             _pauseSettingsGroupBox = new GroupBox
             {
-                Text = "⏸️ Pause on Unfocus",
-                Dock = DockStyle.Top,
-                Height = 100,
-                Padding = new Padding(5)
+                Text = "🔊 Audio Control",
+                Dock = DockStyle.Bottom,
+                Height = 110,
+                Padding = new Padding(3)
             };
 
-            var innerPanel = new TableLayoutPanel
+            var innerPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 3,
-                AutoSize = true
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = false
             };
-            innerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
-            innerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
-            innerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
 
-            // Enable checkbox
+            // Enable muting checkbox
+            _enableMutingCheckbox = new CheckBox
+            {
+                Text = "Enable Muting",
+                Checked = m_enableMuting,
+                AutoSize = true,
+                Margin = new Padding(3, 2, 3, 2)
+            };
+            _enableMutingCheckbox.CheckedChanged += (s, e) =>
+            {
+                m_enableMuting = _enableMutingCheckbox.Checked;
+                Properties.Settings.Default.EnableMuting = m_enableMuting;
+
+                // When muting is disabled, unmute all apps
+                if (!m_enableMuting && m_volumeMixer != null)
+                {
+                    foreach (var pid in m_volumeMixer.GetPIDs())
+                    {
+                        m_volumeMixer.SetApplicationMute(pid, false);
+                    }
+                    LoggingEngine.LogLine("[Muting] Disabled - unmuted all apps",
+                        category: LoggingEngine.LogCategory.General);
+                }
+                else
+                {
+                    LoggingEngine.LogLine("[Muting] Enabled",
+                        category: LoggingEngine.LogCategory.General);
+                }
+            };
+
+            // Enable pause checkbox
             _pauseOnUnfocusCheckbox = new CheckBox
             {
                 Text = "Enable Pause on Unfocus",
                 Checked = _pauseSettings.Enabled,
-                Dock = DockStyle.Fill,
-                AutoSize = true
+                AutoSize = true,
+                Margin = new Padding(3, 2, 3, 2)
             };
             _pauseOnUnfocusCheckbox.CheckedChanged += (s, e) =>
             {
@@ -91,25 +120,17 @@ namespace WinBGMuter
                 UpdateModeComboState();
             };
 
-            // Mode label
-            var modeLabel = new Label
-            {
-                Text = "Mode:",
-                Dock = DockStyle.Fill,
-                AutoSize = true,
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-
-            // Mode combo box
+            // Mode combo box (compact)
             _pauseModeComboBox = new ComboBox
             {
-                Dock = DockStyle.Fill,
+                Width = 180,
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Enabled = _pauseSettings.Enabled
+                Enabled = _pauseSettings.Enabled,
+                Margin = new Padding(3, 2, 3, 2)
             };
-            _pauseModeComboBox.Items.Add("Pause Only (GSMTC)");
+            _pauseModeComboBox.Items.Add("Pause Only");
             _pauseModeComboBox.Items.Add("Pause + Mute Fallback");
-            _pauseModeComboBox.Items.Add("Mute Only (Legacy)");
+            _pauseModeComboBox.Items.Add("Mute Only");
             _pauseModeComboBox.SelectedIndex = (int)_pauseSettings.Mode;
             _pauseModeComboBox.SelectedIndexChanged += (s, e) =>
             {
@@ -119,30 +140,17 @@ namespace WinBGMuter
                 }
             };
 
-            // Mode selection panel (label + combo)
-            var modePanel = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 1,
-                AutoSize = true
-            };
-            modePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50));
-            modePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            modePanel.Controls.Add(modeLabel, 0, 0);
-            modePanel.Controls.Add(_pauseModeComboBox, 1, 0);
-
-            innerPanel.Controls.Add(_pauseOnUnfocusCheckbox, 0, 0);
-            innerPanel.Controls.Add(modePanel, 0, 1);
+            innerPanel.Controls.Add(_enableMutingCheckbox);
+            innerPanel.Controls.Add(_pauseOnUnfocusCheckbox);
+            innerPanel.Controls.Add(_pauseModeComboBox);
 
             _pauseSettingsGroupBox.Controls.Add(innerPanel);
 
-            // Add to the settings panel (groupBox3 -> tableLayoutPanel5)
-            if (tableLayoutPanel5 != null)
+            // Add to the main form's panel1 (bottom docked)
+            if (panel1 != null)
             {
-                tableLayoutPanel5.RowCount += 1;
-                tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
-                tableLayoutPanel5.Controls.Add(_pauseSettingsGroupBox, 0, tableLayoutPanel5.RowCount - 1);
+                panel1.Controls.Add(_pauseSettingsGroupBox);
+                _pauseSettingsGroupBox.BringToFront();
             }
         }
 

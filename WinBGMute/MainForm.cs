@@ -71,6 +71,7 @@ namespace WinBGMuter
         private bool m_enableDemo = false;
         private int m_errorCount = 0;
         private bool m_isMuteConditionBackground = true;
+        private bool m_enableMuting = false;
 
         // @todo untested whether this works
         private static string m_previous_fname = "wininit";
@@ -480,6 +481,8 @@ namespace WinBGMuter
             DarkModeCheckbox_CheckedChanged(sender, EventArgs.Empty);
             AutostartCheckbox_CheckedChanged(sender, EventArgs.Empty);
 
+            // Load muting enabled setting
+            m_enableMuting = Properties.Settings.Default.EnableMuting;
 
         }
 
@@ -662,6 +665,10 @@ namespace WinBGMuter
 
         private void MuterTimer_Tick(object sender, EventArgs e)
         {
+            if (!m_enableMuting)
+            {
+                return;
+            }
             MuterCallback((sender, e));
         }
 

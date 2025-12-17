@@ -155,6 +155,12 @@ namespace WinBGMuter.Controller
 
             foreach (var pid in decision.ToPause)
             {
+                // Skip PID 0 (system idle process)
+                if (pid == 0)
+                {
+                    continue;
+                }
+
                 string processName = GetProcessName(pid);
 
                 // Skip if in never-pause list

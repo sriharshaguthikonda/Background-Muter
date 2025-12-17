@@ -64,45 +64,11 @@ namespace WinBGMuter.Media
                 }
             }
 
-            // 3) if only one playing session exists, choose it
-            var playing = sessions.Where(s => s.PlaybackState == MediaPlaybackState.Playing).ToList();
-            if (playing.Count == 1)
-            {
-                LoggingEngine.LogLine($"[SessionResolver] Single playing session: {playing[0].AppId}",
-                    category: LoggingEngine.LogCategory.MediaControl);
-                return SessionResolution.Success(playing[0].Key);
-            }
-
-            // 4) if multiple playing, prefer most recently updated
-            if (playing.Count > 1)
-            {
-                var pick = playing.OrderByDescending(s => s.LastUpdated).First();
-                LoggingEngine.LogLine($"[SessionResolver] Multiple playing, picked: {pick.AppId}",
-                    category: LoggingEngine.LogCategory.MediaControl);
-                return SessionResolution.Success(pick.Key);
-            }
-
-            // 5) If no playing sessions but there are paused ones, return the first one
-            var paused = sessions.Where(s => s.PlaybackState == MediaPlaybackState.Paused).ToList();
-            if (paused.Count > 0)
-            {
-                LoggingEngine.LogLine($"[SessionResolver] No playing, using paused: {paused[0].AppId}",
-                    category: LoggingEngine.LogCategory.MediaControl);
-                return SessionResolution.Success(paused[0].Key);
-            }
-
-            // 6) If there's any session at all, use the first one
-            if (sessions.Count > 0)
-            {
-                LoggingEngine.LogLine($"[SessionResolver] Fallback to first session: {sessions[0].AppId}",
-                    category: LoggingEngine.LogCategory.MediaControl);
-                return SessionResolution.Success(sessions[0].Key);
-            }
-
-            LoggingEngine.LogLine($"[SessionResolver] No match found for {processName}",
-                category: LoggingEngine.LogCategory.MediaControl,
-                loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
-            return SessionResolution.Ambiguous;
+            // 3) No match found - do NOT fallback to unrelated sessions!
+            // Only pause apps that have their own media session
+            LoggingEngine.LogLine($"[SessionResolver] No matching session for '{processName}' - skipping (not a media app)",
+                category: LoggingEngine.LogCategory.MediaControl);
+            return SessionResolution.NotFound;
         }
     }
 
