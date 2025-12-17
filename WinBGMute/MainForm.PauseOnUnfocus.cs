@@ -1,4 +1,5 @@
 using System;
+using System.Windows.Forms;
 using WinBGMuter.Abstractions;
 using WinBGMuter.Config;
 using WinBGMuter.Controller;
@@ -10,6 +11,10 @@ namespace WinBGMuter
     {
         private AppController? _appController;
         private PauseOnUnfocusSettings? _pauseSettings;
+
+        private CheckBox? _pauseOnUnfocusCheckbox;
+        private ComboBox? _pauseModeComboBox;
+        private GroupBox? _pauseSettingsGroupBox;
 
         private void InitializePauseOnUnfocus()
         {
@@ -36,9 +41,114 @@ namespace WinBGMuter
             }
 
             SetupPauseOnUnfocusTrayMenu();
+            SetupPauseOnUnfocusUIPanel();
 
             LoggingEngine.LogLine($"[PauseOnUnfocus] Initialized (Enabled={_pauseSettings.Enabled}, Mode={_pauseSettings.Mode})",
                 category: LoggingEngine.LogCategory.General);
+        }
+
+        private void SetupPauseOnUnfocusUIPanel()
+        {
+            if (_pauseSettings == null)
+            {
+                return;
+            }
+
+            // Create the group box for pause settings
+            _pauseSettingsGroupBox = new GroupBox
+            {
+                Text = "⏸️ Pause on Unfocus",
+                Dock = DockStyle.Top,
+                Height = 100,
+                Padding = new Padding(5)
+            };
+
+            var innerPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 3,
+                AutoSize = true
+            };
+            innerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+            innerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+            innerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+
+            // Enable checkbox
+            _pauseOnUnfocusCheckbox = new CheckBox
+            {
+                Text = "Enable Pause on Unfocus",
+                Checked = _pauseSettings.Enabled,
+                Dock = DockStyle.Fill,
+                AutoSize = true
+            };
+            _pauseOnUnfocusCheckbox.CheckedChanged += (s, e) =>
+            {
+                OnPauseOnUnfocusToggled(_pauseOnUnfocusCheckbox.Checked);
+                UpdateModeComboState();
+            };
+
+            // Mode label
+            var modeLabel = new Label
+            {
+                Text = "Mode:",
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            // Mode combo box
+            _pauseModeComboBox = new ComboBox
+            {
+                Dock = DockStyle.Fill,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Enabled = _pauseSettings.Enabled
+            };
+            _pauseModeComboBox.Items.Add("Pause Only (GSMTC)");
+            _pauseModeComboBox.Items.Add("Pause + Mute Fallback");
+            _pauseModeComboBox.Items.Add("Mute Only (Legacy)");
+            _pauseModeComboBox.SelectedIndex = (int)_pauseSettings.Mode;
+            _pauseModeComboBox.SelectedIndexChanged += (s, e) =>
+            {
+                if (_pauseModeComboBox.SelectedIndex >= 0)
+                {
+                    OnPolicyModeChanged((PolicyMode)_pauseModeComboBox.SelectedIndex);
+                }
+            };
+
+            // Mode selection panel (label + combo)
+            var modePanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                AutoSize = true
+            };
+            modePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50));
+            modePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            modePanel.Controls.Add(modeLabel, 0, 0);
+            modePanel.Controls.Add(_pauseModeComboBox, 1, 0);
+
+            innerPanel.Controls.Add(_pauseOnUnfocusCheckbox, 0, 0);
+            innerPanel.Controls.Add(modePanel, 0, 1);
+
+            _pauseSettingsGroupBox.Controls.Add(innerPanel);
+
+            // Add to the settings panel (groupBox3 -> tableLayoutPanel5)
+            if (tableLayoutPanel5 != null)
+            {
+                tableLayoutPanel5.RowCount += 1;
+                tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
+                tableLayoutPanel5.Controls.Add(_pauseSettingsGroupBox, 0, tableLayoutPanel5.RowCount - 1);
+            }
+        }
+
+        private void UpdateModeComboState()
+        {
+            if (_pauseModeComboBox != null && _pauseOnUnfocusCheckbox != null)
+            {
+                _pauseModeComboBox.Enabled = _pauseOnUnfocusCheckbox.Checked;
+            }
         }
 
         private void SetupPauseOnUnfocusTrayMenu()

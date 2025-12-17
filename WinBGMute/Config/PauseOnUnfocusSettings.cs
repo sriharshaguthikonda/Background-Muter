@@ -9,7 +9,7 @@ namespace WinBGMuter.Config
         private const string SettingKeyAudibilityThreshold = "AudibilityThreshold";
 
         public bool Enabled { get; set; } = false;
-        public PolicyMode Mode { get; set; } = PolicyMode.PauseThenMuteFallback;
+        public PolicyMode Mode { get; set; } = PolicyMode.PauseOnly;
         public float AudibilityThreshold { get; set; } = 0.01f;
 
         public void Load()
@@ -25,12 +25,12 @@ namespace WinBGMuter.Config
 
             try
             {
-                var modeValue = Properties.Settings.Default[SettingKeyMode] as int? ?? (int)PolicyMode.PauseThenMuteFallback;
+                var modeValue = Properties.Settings.Default[SettingKeyMode] as int? ?? (int)PolicyMode.PauseOnly;
                 Mode = (PolicyMode)modeValue;
             }
             catch
             {
-                Mode = PolicyMode.PauseThenMuteFallback;
+                Mode = PolicyMode.PauseOnly;
             }
 
             try
