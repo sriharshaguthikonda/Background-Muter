@@ -22,6 +22,9 @@
     <Content Include="res\bgm_muted.ico" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.22621.1" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\.github\workflows\codeql-analysis.yml" Link="codeql-analysis.yml" />
     <None Include="..\.github\workflows\dotnet.yml" Link="dotnet.yml" />
     <None Include="..\.github\workflows\tagged-release.yml" Link="tagged-release.yml" />
