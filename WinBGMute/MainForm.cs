@@ -534,6 +534,7 @@ namespace WinBGMuter
             m_keepAliveTimer.AutoReset = true;
             m_keepAliveTimer.Enabled = true;
 
+            InitializePauseOnUnfocus();
 
         }
 
@@ -561,6 +562,8 @@ namespace WinBGMuter
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
         {
             TrayIcon.Visible = false;
+
+            CleanupPauseOnUnfocus();
 
             if (m_settingsChanged)
             {
