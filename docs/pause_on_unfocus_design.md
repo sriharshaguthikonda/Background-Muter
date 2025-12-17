@@ -27,6 +27,12 @@ This document captures the behaviour, constraints, and edge cases for adding **p
 4. When focus returns to a PID marked `pausedByUs`, attempt resume (play) if the media session state allows it; clear the flag afterward.
 5. Clear state entries if a process exits or its session disappears.
 
+## Audible detection heuristic
+- Use Core Audio session snapshots to build a per-PID view of activity.
+- A process is considered **audible** when the session reports `IsActive == true` **and** the peak meter is above a configurable
+  threshold (default: `0.01f`).
+- When multiple sessions map to the same PID, keep the loudest peak to represent that PID and avoid duplicate actions.
+
 ## Edge cases
 - **Rapid Alt+Tab:** debounce foreground changes to avoid oscillation.
 - **Manual pause by user:** if the user pauses while focused, do not auto-resume on refocus.
