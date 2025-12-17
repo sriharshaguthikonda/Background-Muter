@@ -17,7 +17,8 @@ You can add exceptions for which applications are never muted.
 * Works out of the box with default settings
 * Add exceptions for applications to never be muted
 * Minimize to tray icon
-* Dark Mode 
+* Dark Mode
+* Debounced foreground detection to reduce rapid mute/unmute flicker during fast app switching
 
 # Requirements
 * Requires DotNet 8.0 to work (install here https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
