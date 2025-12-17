@@ -20,12 +20,19 @@ This document captures the behaviour, constraints, and edge cases for adding **p
 ## Event flow
 1. **Foreground change** detected via `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`.
 2. Determine the new foreground process ID and fetch the current audible process set from Core Audio session scans.
-3. For each audible PID not matching the foreground:
+3. Query **GSMTC sessions** via `GlobalSystemMediaTransportControlsSessionManager` to understand current playback state and app identifiers.
+4. For each audible PID not matching the foreground:
    - Apply policy to select an action (pause, pause+mute fallback, or mute).
    - Attempt to pause via GSMTC using the session resolver; if unsupported and fallback is enabled, mute.
    - Record `pausedByUs` state only when an action succeeds.
-4. When focus returns to a PID marked `pausedByUs`, attempt resume (play) if the media session state allows it; clear the flag afterward.
-5. Clear state entries if a process exits or its session disappears.
+5. When focus returns to a PID marked `pausedByUs`, attempt resume (play) if the media session state allows it; clear the flag afterward.
+6. Clear state entries if a process exits or its session disappears.
+
+## GSMTC session discovery
+- Use the Windows `GlobalSystemMediaTransportControlsSessionManager` to enumerate media sessions exposed by apps that support system media controls.
+- Capture per-session metadata: **SourceAppUserModelId** (app identity), playback state, and latest timeline timestamp to help resolve sessions back to processes.
+- Prefer authoritative identifiers when available; fall back to temporary identifiers when the platform does not expose app IDs.
+- Log session enumeration counts for diagnostics; do not take control actions in this step.
 
 ## Audible detection heuristic
 - Use Core Audio session snapshots to build a per-PID view of activity.
