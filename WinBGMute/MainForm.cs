@@ -257,7 +257,7 @@ namespace WinBGMuter
                 // mute all other processes (with an audio channel), except  the ones on the neverMuteList
                 else
                 {
-                    if (m_neverMuteList.Contains(audio_pname))
+                    if (IsInNeverMuteList(audio_pname))
                     {
                         //LoggingEngine.LogLine($" [!] Process {audio_pname}({audio_pid}) skipped ", Color.BlueViolet);
                         log_skipped += audio_pname + ", ";
@@ -553,10 +553,36 @@ namespace WinBGMuter
 
             foreach (string neverMuteEntry in neverMuteList)
             {
-                NeverMuteListBox.Items.Add(neverMuteEntry);
+                NeverMuteListBox.Items.Add(neverMuteEntry.Trim());
             }
 
 
+        }
+
+        /// <summary>
+        /// Returns a case-insensitive HashSet of process names from the never-mute list.
+        /// This is the canonical way to check if a process should be skipped.
+        /// </summary>
+        private HashSet<string> GetNeverMuteSet()
+        {
+            if (string.IsNullOrEmpty(m_neverMuteList))
+            {
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return m_neverMuteList
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Checks if a process name is in the never-mute list (case-insensitive exact match).
+        /// </summary>
+        private bool IsInNeverMuteList(string processName)
+        {
+            return GetNeverMuteSet().Contains(processName);
         }
 
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)

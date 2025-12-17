@@ -244,17 +244,8 @@ namespace WinBGMuter
 
         private IEnumerable<string> GetNeverPauseList()
         {
-            // Use the same never-mute list for never-pause
-            // Trim whitespace from each entry to match exactly
-            if (string.IsNullOrEmpty(m_neverMuteList))
-            {
-                return Array.Empty<string>();
-            }
-
-            return m_neverMuteList
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .Where(s => !string.IsNullOrEmpty(s));
+            // Reuse the same canonical never-mute set for pause
+            return GetNeverMuteSet();
         }
     }
 }
