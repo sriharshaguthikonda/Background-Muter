@@ -21,7 +21,7 @@ using System.Runtime.InteropServices;
 
 namespace WinBGMuter
 {
-    internal class LoggingEngine
+    internal sealed class LoggingEngine
     {
         public delegate void _LogFunction(object input, object? color = null, object? font = null);
         public delegate void _LogLineFunction(object input, object? color = null, object? font = null);
@@ -33,6 +33,9 @@ namespace WinBGMuter
         public static LOG_LEVEL_TYPE LogLevel { get; set; }
 
         public static bool HasDateTime {  get; set; }    
+
+        private static _LogFunction m_logFunction = DefaultLogFunction;
+        private static _LogLineFunction m_logLineFunction = DefaultLogLineFunction;
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -84,7 +87,7 @@ namespace WinBGMuter
         private static string FormatInput(object input, LOG_LEVEL_TYPE loglevel = LOG_LEVEL_TYPE.LOG_DEBUG, LogCategory category = LogCategory.General)
         {
             string output = "";
-            output += HasDateTime ? DateTime.Now.ToString("dd/MM/yyyy H:mm:ss:fff") : "";
+            output += HasDateTime ? DateTime.Now.ToString("dd/MM/yyyy H:mm:ss:fff", System.Globalization.CultureInfo.InvariantCulture) : "";
             output += $" [{category}] > ";
             output += input;
 

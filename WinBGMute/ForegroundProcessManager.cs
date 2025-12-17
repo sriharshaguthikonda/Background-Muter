@@ -30,7 +30,7 @@ using Timer = System.Timers.Timer;
 
 namespace WinBGMuter
 {
-    internal class ForegroundProcessManager
+    internal sealed class ForegroundProcessManager : IDisposable
     {
         //WinAPI to translate PID from hWND
         [DllImport("User32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -64,9 +64,9 @@ namespace WinBGMuter
         private const Int32 OBJID_WINDOW = 0x00000000;
         private const Int32 CHILDID_SELF = 0;
 
-        private IntPtr m_hWinEventHook;
-        private WinEventProcDelegate m_winEventProc;
-        private static ConcurrentStack<int> m_JobStack = new ConcurrentStack<int>();
+        private IntPtr m_hWinEventHook = IntPtr.Zero;
+        private WinEventProcDelegate m_winEventProc = null!;
+        private static readonly ConcurrentStack<int> m_JobStack = new ConcurrentStack<int>();
         private readonly Timer m_debounceTimer;
         private readonly object m_debounceLock = new object();
 
@@ -119,6 +119,11 @@ namespace WinBGMuter
 
         }
 
+        public void Dispose()
+        {
+            CleanUp();
+        }
+
         private void WinEventProc(
           IntPtr hWinEventHook,
           UInt32 ev,
@@ -131,9 +136,11 @@ namespace WinBGMuter
           )
         {
             uint testpid = 0;
-            GetWindowThreadProcessId(hwnd, out testpid);
-
-            int ftestpidpid = (int)testpid;
+            var threadId = GetWindowThreadProcessId(hwnd, out testpid);
+            if (threadId == 0)
+            {
+                return;
+            }
 
             if (ev == EVENT_SYSTEM_FOREGROUND &&
                 idObject == OBJID_WINDOW &&
