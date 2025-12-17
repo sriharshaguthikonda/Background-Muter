@@ -26,13 +26,17 @@ namespace WinBGMuter.Controller
         private readonly SemaphoreSlim _processingLock = new(1, 1);
         private bool _enabled = true;
 
+        private Func<IEnumerable<string>>? _getNeverPauseList;
+
         public AppController(
             VolumeMixer volumeMixer,
             PolicyMode policyMode = PolicyMode.PauseThenMuteFallback,
             float audibilityThreshold = 0.01f,
-            IReadOnlyDictionary<string, string>? processNameToSessionHint = null)
+            IReadOnlyDictionary<string, string>? processNameToSessionHint = null,
+            Func<IEnumerable<string>>? getNeverPauseList = null)
         {
             _volumeMixer = volumeMixer;
+            _getNeverPauseList = getNeverPauseList;
             _foregroundTracker = new WinEventForegroundTracker();
             _mediaController = new GsmtcMediaController();
             _sessionResolver = new SessionResolver(_mediaController, processNameToSessionHint);
@@ -146,9 +150,20 @@ namespace WinBGMuter.Controller
             }
 
             // 4) Pause/mute background apps
+            var neverPauseList = _getNeverPauseList?.Invoke()?.ToHashSet(StringComparer.OrdinalIgnoreCase) 
+                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var pid in decision.ToPause)
             {
                 string processName = GetProcessName(pid);
+
+                // Skip if in never-pause list
+                if (neverPauseList.Contains(processName))
+                {
+                    LoggingEngine.LogLine($"[AppController] Skipping {processName} (in never-pause list)",
+                        category: LoggingEngine.LogCategory.Policy);
+                    continue;
+                }
 
                 var pauseActionResult = await _pauseAction.TryPauseAsync(processName).ConfigureAwait(false);
 

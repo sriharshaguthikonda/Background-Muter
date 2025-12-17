@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows.Forms;
 using WinBGMuter.Abstractions;
 using WinBGMuter.Config;
@@ -31,7 +32,9 @@ namespace WinBGMuter
             _appController = new AppController(
                 m_volumeMixer,
                 _pauseSettings.Mode,
-                _pauseSettings.AudibilityThreshold);
+                _pauseSettings.AudibilityThreshold,
+                null,
+                GetNeverPauseList);
 
             _appController.Enabled = _pauseSettings.Enabled;
 
@@ -217,7 +220,9 @@ namespace WinBGMuter
                 _appController = new AppController(
                     m_volumeMixer,
                     mode,
-                    _pauseSettings.AudibilityThreshold);
+                    _pauseSettings.AudibilityThreshold,
+                    null,
+                    GetNeverPauseList);
 
                 _appController.Enabled = wasEnabled;
 
@@ -235,6 +240,21 @@ namespace WinBGMuter
             _appController?.Stop();
             _appController?.Dispose();
             _appController = null;
+        }
+
+        private IEnumerable<string> GetNeverPauseList()
+        {
+            // Use the same never-mute list for never-pause
+            // Trim whitespace from each entry to match exactly
+            if (string.IsNullOrEmpty(m_neverMuteList))
+            {
+                return Array.Empty<string>();
+            }
+
+            return m_neverMuteList
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s));
         }
     }
 }
