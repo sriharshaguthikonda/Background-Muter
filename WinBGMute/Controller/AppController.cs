@@ -15,8 +15,7 @@ namespace WinBGMuter.Controller
     internal sealed class AppController : IDisposable
     {
         private readonly WinEventForegroundTracker _foregroundTracker;
-        private readonly CoreAudioSessionScanner _audioScanner;
-        private readonly AudibilityDetector _audibilityDetector;
+        private readonly VolumeMixer _volumeMixer;
         private readonly GsmtcMediaController _mediaController;
         private readonly SessionResolver _sessionResolver;
         private readonly PauseAction _pauseAction;
@@ -33,9 +32,8 @@ namespace WinBGMuter.Controller
             float audibilityThreshold = 0.01f,
             IReadOnlyDictionary<string, string>? processNameToSessionHint = null)
         {
+            _volumeMixer = volumeMixer;
             _foregroundTracker = new WinEventForegroundTracker();
-            _audioScanner = new CoreAudioSessionScanner();
-            _audibilityDetector = new AudibilityDetector(audibilityThreshold);
             _mediaController = new GsmtcMediaController();
             _sessionResolver = new SessionResolver(_mediaController, processNameToSessionHint);
             _pauseAction = new PauseAction(_mediaController, _sessionResolver);
@@ -114,22 +112,16 @@ namespace WinBGMuter.Controller
             LoggingEngine.LogLine($"[AppController] Foreground changed to {foregroundProcessName} (PID {foregroundPid})",
                 category: LoggingEngine.LogCategory.Foreground);
 
-            // 1) Get audio snapshot
-            var snapshot = await _audioScanner.GetSnapshotAsync().ConfigureAwait(false);
-            var audiblePids = _audibilityDetector.GetAudiblePids(snapshot);
-
-            LoggingEngine.LogLine($"[AppController] Snapshot: {snapshot.Processes.Count} processes, {audiblePids.Count} audible",
-                category: LoggingEngine.LogCategory.AudioSessions);
-
-            foreach (var pid in audiblePids)
-            {
-                LoggingEngine.LogLine($"[AppController] Audible PID: {pid} ({GetProcessName(pid)})",
-                    category: LoggingEngine.LogCategory.AudioSessions);
-            }
+            // 1) Get audio PIDs from VolumeMixer (already works for existing mute logic)
+            int[] audioPids = _volumeMixer.GetPIDs();
+            var audiblePids = new List<int>(audioPids);
+            
+            LoggingEngine.LogLine($"[AppController] Found {audiblePids.Count} audio PIDs: {string.Join(", ", audiblePids)}",
+                category: LoggingEngine.LogCategory.Policy);
 
             // 2) Evaluate policy
             var decision = _policyEngine.Evaluate(foregroundPid, audiblePids, foregroundProcessName);
-
+            
             LoggingEngine.LogLine($"[AppController] Policy decision: ToPause={decision.ToPause.Count}, ToMute={decision.ToMute.Count}",
                 category: LoggingEngine.LogCategory.Policy);
 

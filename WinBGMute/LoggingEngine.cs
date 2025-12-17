@@ -72,10 +72,23 @@ namespace WinBGMuter
         public static void RestoreDefault()
         {
             AllocConsole();
+            
+            // Redirect stdout to the new console
+            var stdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+            var safeHandle = new Microsoft.Win32.SafeHandles.SafeFileHandle(stdOut, false);
+            var fileStream = new FileStream(safeHandle, FileAccess.Write);
+            var writer = new StreamWriter(fileStream, Console.OutputEncoding) { AutoFlush = true };
+            Console.SetOut(writer);
+            
             m_logFunction = DefaultLogFunction;
             m_logLineFunction = DefaultLogLineFunction;
             LogLevel = LOG_LEVEL_TYPE.LOG_DEBUG;
         }
+
+        private const int STD_OUTPUT_HANDLE = -11;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr GetStdHandle(int nStdHandle);
 
         public static void SetEngine(_LogFunction logfn, _LogLineFunction loglinefn)
         {

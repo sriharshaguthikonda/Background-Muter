@@ -185,17 +185,13 @@ namespace WinBGMuter
 
             if (enabled)
             {
-                // Disable the old mute timer when pause-on-unfocus is enabled
-                MuterTimer.Enabled = false;
                 _appController.Start();
-                LoggingEngine.LogLine("[PauseOnUnfocus] Enabled (old mute timer disabled)", category: LoggingEngine.LogCategory.General);
+                LoggingEngine.LogLine("[PauseOnUnfocus] Enabled", category: LoggingEngine.LogCategory.General);
             }
             else
             {
                 _appController.Stop();
-                // Re-enable the old mute timer when pause-on-unfocus is disabled
-                MuterTimer.Enabled = true;
-                LoggingEngine.LogLine("[PauseOnUnfocus] Disabled (old mute timer re-enabled)", category: LoggingEngine.LogCategory.General);
+                LoggingEngine.LogLine("[PauseOnUnfocus] Disabled", category: LoggingEngine.LogCategory.General);
             }
 
             _pauseSettings.Save();
