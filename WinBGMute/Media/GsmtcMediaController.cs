@@ -50,16 +50,33 @@ namespace WinBGMuter.Media
             var s = await GetSessionAsync(session, cancellationToken).ConfigureAwait(false);
             if (s == null)
             {
+                LoggingEngine.LogLine($"[GSMTC] TryPauseAsync: Session not found for {session.Id}",
+                    category: LoggingEngine.LogCategory.MediaControl,
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
                 return MediaControlResult.NotSupported;
             }
 
             try
             {
-                await s.TryPauseAsync();
-                return MediaControlResult.Success;
+                var playbackInfo = s.GetPlaybackInfo();
+                if (playbackInfo?.Controls?.IsPauseEnabled != true)
+                {
+                    LoggingEngine.LogLine($"[GSMTC] TryPauseAsync: Pause not supported for {session.Id}",
+                        category: LoggingEngine.LogCategory.MediaControl,
+                        loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+                    return MediaControlResult.NotSupported;
+                }
+
+                bool success = await s.TryPauseAsync();
+                LoggingEngine.LogLine($"[GSMTC] TryPauseAsync: {session.Id} -> {(success ? "SUCCESS" : "FAILED")}",
+                    category: LoggingEngine.LogCategory.MediaControl);
+                return success ? MediaControlResult.Success : MediaControlResult.Failed;
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingEngine.LogLine($"[GSMTC] TryPauseAsync exception: {ex.Message}",
+                    category: LoggingEngine.LogCategory.MediaControl,
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_ERROR);
                 return MediaControlResult.Failed;
             }
         }
@@ -70,16 +87,33 @@ namespace WinBGMuter.Media
             var s = await GetSessionAsync(session, cancellationToken).ConfigureAwait(false);
             if (s == null)
             {
+                LoggingEngine.LogLine($"[GSMTC] TryPlayAsync: Session not found for {session.Id}",
+                    category: LoggingEngine.LogCategory.MediaControl,
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
                 return MediaControlResult.NotSupported;
             }
 
             try
             {
-                await s.TryPlayAsync();
-                return MediaControlResult.Success;
+                var playbackInfo = s.GetPlaybackInfo();
+                if (playbackInfo?.Controls?.IsPlayEnabled != true)
+                {
+                    LoggingEngine.LogLine($"[GSMTC] TryPlayAsync: Play not supported for {session.Id}",
+                        category: LoggingEngine.LogCategory.MediaControl,
+                        loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+                    return MediaControlResult.NotSupported;
+                }
+
+                bool success = await s.TryPlayAsync();
+                LoggingEngine.LogLine($"[GSMTC] TryPlayAsync: {session.Id} -> {(success ? "SUCCESS" : "FAILED")}",
+                    category: LoggingEngine.LogCategory.MediaControl);
+                return success ? MediaControlResult.Success : MediaControlResult.Failed;
             }
-            catch
+            catch (Exception ex)
             {
+                LoggingEngine.LogLine($"[GSMTC] TryPlayAsync exception: {ex.Message}",
+                    category: LoggingEngine.LogCategory.MediaControl,
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_ERROR);
                 return MediaControlResult.Failed;
             }
         }

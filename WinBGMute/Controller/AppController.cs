@@ -146,22 +146,29 @@ namespace WinBGMuter.Controller
             {
                 string processName = GetProcessName(pid);
 
-                var pauseResult = await _pauseAction.TryPauseAsync(processName).ConfigureAwait(false);
+                var pauseActionResult = await _pauseAction.TryPauseAsync(processName).ConfigureAwait(false);
 
-                if (pauseResult == PauseResult.Success)
+                if (pauseActionResult.Result == PauseResult.Success && pauseActionResult.SessionKey != null)
                 {
-                    var sessions = await _mediaController.ListSessionsAsync().ConfigureAwait(false);
-                    var sessionKey = sessions.FirstOrDefault(s =>
-                        string.Equals(s.AppId, processName, StringComparison.OrdinalIgnoreCase))?.Key.Id ?? processName;
-                    _stateStore.MarkPaused(pid, "pause", sessionKey);
+                    _stateStore.MarkPaused(pid, "pause", pauseActionResult.SessionKey.Id);
+                    LoggingEngine.LogLine($"[AppController] Paused {processName} (session: {pauseActionResult.SessionKey.Id})",
+                        category: LoggingEngine.LogCategory.Policy);
                 }
                 else if (_policyEngine.Mode == PolicyMode.PauseThenMuteFallback)
                 {
                     // Fallback to mute
+                    LoggingEngine.LogLine($"[AppController] Pause failed for {processName}, falling back to mute",
+                        category: LoggingEngine.LogCategory.Policy);
                     if (_muteAction.TryMute(pid) == MuteResult.Success)
                     {
                         _stateStore.MarkPaused(pid, "mute", string.Empty);
                     }
+                }
+                else
+                {
+                    LoggingEngine.LogLine($"[AppController] Pause failed for {processName}, no fallback (PauseOnly mode)",
+                        category: LoggingEngine.LogCategory.Policy,
+                        loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
                 }
             }
 

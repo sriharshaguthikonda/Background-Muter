@@ -17,7 +17,7 @@ namespace WinBGMuter.Actions
             _resolver = resolver;
         }
 
-        public async Task<PauseResult> TryPauseAsync(string processName, CancellationToken cancellationToken = default)
+        public async Task<PauseActionResult> TryPauseAsync(string processName, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -27,28 +27,30 @@ namespace WinBGMuter.Actions
             {
                 case SessionResolutionStatus.NotFound:
                     LoggingEngine.LogLine($"[PauseAction] No session found for {processName}", category: LoggingEngine.LogCategory.MediaControl);
-                    return PauseResult.NotSupported;
+                    return new PauseActionResult(PauseResult.NotSupported, null);
 
                 case SessionResolutionStatus.Ambiguous:
                     LoggingEngine.LogLine($"[PauseAction] Ambiguous session for {processName}", category: LoggingEngine.LogCategory.MediaControl);
-                    return PauseResult.Ambiguous;
+                    return new PauseActionResult(PauseResult.Ambiguous, null);
 
                 case SessionResolutionStatus.Success:
                     break;
 
                 default:
-                    return PauseResult.Failed;
+                    return new PauseActionResult(PauseResult.Failed, null);
             }
 
             var session = resolution.Session!;
             var result = await _mediaController.TryPauseAsync(session, cancellationToken).ConfigureAwait(false);
 
-            return result switch
+            var pauseResult = result switch
             {
                 MediaControlResult.Success => PauseResult.Success,
                 MediaControlResult.NotSupported => PauseResult.NotSupported,
                 _ => PauseResult.Failed
             };
+
+            return new PauseActionResult(pauseResult, pauseResult == PauseResult.Success ? session : null);
         }
 
         public async Task<PauseResult> TryResumeAsync(MediaSessionKey sessionKey, CancellationToken cancellationToken = default)
@@ -72,5 +74,17 @@ namespace WinBGMuter.Actions
         NotSupported,
         Ambiguous,
         Failed
+    }
+
+    internal readonly struct PauseActionResult
+    {
+        public PauseActionResult(PauseResult result, MediaSessionKey? sessionKey)
+        {
+            Result = result;
+            SessionKey = sessionKey;
+        }
+
+        public PauseResult Result { get; }
+        public MediaSessionKey? SessionKey { get; }
     }
 }
