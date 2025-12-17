@@ -118,8 +118,20 @@ namespace WinBGMuter.Controller
             var snapshot = await _audioScanner.GetSnapshotAsync().ConfigureAwait(false);
             var audiblePids = _audibilityDetector.GetAudiblePids(snapshot);
 
+            LoggingEngine.LogLine($"[AppController] Snapshot: {snapshot.Processes.Count} processes, {audiblePids.Count} audible",
+                category: LoggingEngine.LogCategory.AudioSessions);
+
+            foreach (var pid in audiblePids)
+            {
+                LoggingEngine.LogLine($"[AppController] Audible PID: {pid} ({GetProcessName(pid)})",
+                    category: LoggingEngine.LogCategory.AudioSessions);
+            }
+
             // 2) Evaluate policy
             var decision = _policyEngine.Evaluate(foregroundPid, audiblePids, foregroundProcessName);
+
+            LoggingEngine.LogLine($"[AppController] Policy decision: ToPause={decision.ToPause.Count}, ToMute={decision.ToMute.Count}",
+                category: LoggingEngine.LogCategory.Policy);
 
             // 3) Resume foreground if we paused it
             if (_stateStore.TryGetPaused(foregroundPid, out var pausedState))
