@@ -19,6 +19,7 @@ You can add exceptions for which applications are never muted.
 * Minimize to tray icon
 * Dark Mode
 * Debounced foreground detection to reduce rapid mute/unmute flicker during fast app switching
+* Pause-on-unfocus design notes and glossary are documented in `docs/pause_on_unfocus_design.md` and `docs/glossary.md`
 
 # Requirements
 * Requires DotNet 8.0 to work (install here https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
