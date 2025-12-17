@@ -321,11 +321,19 @@ namespace WinBGMuter
     }
 
     [Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal enum AudioSessionState
+    {
+        AudioSessionStateInactive = 0,
+        AudioSessionStateActive = 1,
+        AudioSessionStateExpired = 2
+    }
+
+    [Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IAudioSessionControl2
     {
         // IAudioSessionControl
         [PreserveSig]
-        int NotImpl0();
+        int GetState(out AudioSessionState pRetVal);
 
         [PreserveSig]
         int GetDisplayName([MarshalAs(UnmanagedType.LPWStr)] out string pRetVal);
@@ -366,5 +374,21 @@ namespace WinBGMuter
 
         [PreserveSig]
         int SetDuckingPreference(bool optOut);
+    }
+
+    [Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IAudioMeterInformation
+    {
+        [PreserveSig]
+        int GetPeakValue(out float pfPeak);
+
+        [PreserveSig]
+        int GetMeteringChannelCount(out int pnChannelCount);
+
+        [PreserveSig]
+        int GetChannelsPeakValues(int u32ChannelCount, IntPtr afPeakValues);
+
+        [PreserveSig]
+        int QueryHardwareSupport(out int pdwHardwareSupportMask);
     }
 }
