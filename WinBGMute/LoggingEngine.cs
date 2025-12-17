@@ -26,9 +26,7 @@ namespace WinBGMuter
         public delegate void _LogFunction(object input, object? color = null, object? font = null);
         public delegate void _LogLineFunction(object input, object? color = null, object? font = null);
 
-        public static _LogFunction m_logFunction = DefaultLogFunction;
-        public static _LogLineFunction m_logLineFunction = DefaultLogLineFunction;
-
+        public enum LogCategory { General, Foreground, AudioSessions, MediaControl, Policy, State }
         public enum LOG_LEVEL_TYPE {LOG_NONE, LOG_ERROR, LOG_WARNING, LOG_INFO, LOG_DEBUG };
         public static bool Enabled { get; set; }
 
@@ -83,16 +81,16 @@ namespace WinBGMuter
             m_logLineFunction = loglinefn;
         }
 
-        private static string FormatInput(object input, LOG_LEVEL_TYPE loglevel = LOG_LEVEL_TYPE.LOG_DEBUG)
+        private static string FormatInput(object input, LOG_LEVEL_TYPE loglevel = LOG_LEVEL_TYPE.LOG_DEBUG, LogCategory category = LogCategory.General)
         {
             string output = "";
             output += HasDateTime ? DateTime.Now.ToString("dd/MM/yyyy H:mm:ss:fff") : "";
-            output += " > ";
+            output += $" [{category}] > ";
             output += input;
 
             return output;
         }
-        public static void Log(object input, object? color = null, object? font = null, LOG_LEVEL_TYPE loglevel = LOG_LEVEL_TYPE.LOG_DEBUG)
+        public static void Log(object input, object? color = null, object? font = null, LOG_LEVEL_TYPE loglevel = LOG_LEVEL_TYPE.LOG_DEBUG, LogCategory category = LogCategory.General)
         {
             if (!Enabled)
                 return;
@@ -104,10 +102,10 @@ namespace WinBGMuter
             }
 
             
-            m_logFunction(input, color, font);
+            m_logFunction(FormatInput(input, loglevel, category), color, font);
         }
 
-        public static void LogLine(object input, object? color = null, object? font = null, LOG_LEVEL_TYPE loglevel=LOG_LEVEL_TYPE.LOG_DEBUG)
+        public static void LogLine(object input, object? color = null, object? font = null, LOG_LEVEL_TYPE loglevel=LOG_LEVEL_TYPE.LOG_DEBUG, LogCategory category = LogCategory.General)
         {
             if (!Enabled)
                 return;
@@ -117,7 +115,7 @@ namespace WinBGMuter
                 return;
             }
 
-            m_logLineFunction(FormatInput(input), color, font);
+            m_logLineFunction(FormatInput(input, loglevel, category), color, font);
         }
 
     }
