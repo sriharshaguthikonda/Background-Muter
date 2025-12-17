@@ -71,7 +71,6 @@ namespace WinBGMuter
         private bool m_enableDemo = false;
         private int m_errorCount = 0;
         private bool m_isMuteConditionBackground = true;
-        private bool m_enableMuting = false;
 
         // @todo untested whether this works
         private static string m_previous_fname = "wininit";
@@ -79,7 +78,6 @@ namespace WinBGMuter
 
         // keep alive timer @todo replace the Forms timer with the System.Timer
         private static System.Timers.Timer m_keepAliveTimer = new System.Timers.Timer(600000);
-
 
         private void InternalLog(object olog, object? ocolor = null, object? ofont = null)
         {
@@ -135,187 +133,50 @@ namespace WinBGMuter
             int pid = (data is int) ? (int)data : -1;
             LoggingEngine.LogLine("[-] Process access failed for PID " + pid.ToString() + " @" + ex.Source, Color.Red);
             m_volumeMixer.ReloadAudio(true);
-
-
         }
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool IsIconic(IntPtr hWnd);
-        // stores previous foreground process name for fallback in case of error
-        private void RunMuter(int fpid, bool doMute = true)
-        {
-            Dictionary<int, (string, Process[])> audio_procs = new Dictionary<int, (string, Process[])>();
 
+        private void RefreshProcessList()
+        {
             // clear process list
             ProcessListListBox.Items.Clear();
 
             if (m_volumeMixer == null)
             {
-                LoggingEngine.LogLine("[-] Volume Mixer failed to initialize. Muting functionality will not work!", loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_ERROR);
                 return;
             }
             // get a process PID list of processes with an audio channel
             int[] audio_pids = m_volumeMixer.GetPIDs();
 
-            // populate dictionary audio_procs for each PID in audio_pids with KEY=<PID>, VALUE=tuple(<PROCESS_NAME>, <Process>)
             foreach (var pid in audio_pids)
             {
                 try
                 {
                     Process proc = Process.GetProcessById(pid);
-                    /*
-                    if (proc.HasExited)
-                    {
-                        LoggingEngine.LogLine($"[!] PID with audio channel {pid} has exited! This will likely trigger an error");
-                    }
-
-                    */
                     string pname = proc.ProcessName;
 
-                    //add proc name to ListBox if it will be muted
                     if (!NeverMuteListBox.Items.Contains(pname))
                     {
                         ProcessListListBox.Items.Add(pname);
                     }
-
-                    //gather all processes of the same name as the process of the current pid (workaround for some programs)
-                    Process[] procs_similar = Process.GetProcessesByName(pname);
-
-                    //add all processes of the same name as pname to the audio_procs corresponding to PID
-                    audio_procs.Add(pid, (pname, procs_similar));
                 }
                 catch (Exception ex)
                 {
                     HandleError(ex, (object)pid);
                 }
-                finally
-                {
-                    if (!audio_procs.ContainsKey(pid))
-                    {
-                        LoggingEngine.LogLine($"[-] PID with audio channel {pid} not found in process list (most likely due to an error)");
-                        //throw new Exception();
-                        Process[] empty_procs = { };
-                        audio_procs.Add(pid, ("", empty_procs));
-                    }
-                }
             }
-
-            if (!doMute)
-                return;
-
-            // get foreground process object. If failed (e.g. process exited), revert to last process
-            string fname = "";
-            try
-            {
-                Process fproc = Process.GetProcessById(fpid);
-                fname = fproc.ProcessName;
-                m_previous_fname = fname;
-                m_previous_fpid = fpid;
-            }
-            catch (Exception ex)
-            {
-                fname = m_previous_fname;
-                LoggingEngine.LogLine($"[!] Process name not found for pid {fpid}. Reverting to {fname}. {ex.ToString()}", Color.Orange);
-            }
-
-
-            //Inline function to mute/unmute a list of processes
-            Func<Process[], bool, int?, string> InlineMuteProcList = (procs, isMuted, additionalPID) =>
-            {
-                string log_output = "";
-
-                if (additionalPID != null)
-                {
-                    m_volumeMixer.SetApplicationMute((int)additionalPID, isMuted);
-                }
-                foreach (var fproc_similar in procs)
-                {
-                    var fproc_similar_pid = fproc_similar.Id;
-                    m_volumeMixer.SetApplicationMute(fproc_similar_pid, isMuted);
-                    log_output += ".";
-                }
-                //log_output += "\r\n";
-                return log_output;
-            };
-
-            string log_skipped = "";
-            string log_muted = "";
-
-            foreach (var item in audio_procs)
-            {
-                var audio_pid = item.Key;
-                var audio_pname = item.Value.Item1;
-                var audio_proc_list = item.Value.Item2;
-
-                // check if this is the foreground process
-                // if yes unmute all foreground processes with the same name
-                if (audio_pname == fname)
-                {
-                    string log_output = InlineMuteProcList(audio_proc_list, false, audio_pid);
-                    LoggingEngine.LogLine($"[+] Unmuting foreground process {audio_pname}({audio_pid}) {log_output} ", Color.BlueViolet);
-                }
-                // mute all other processes (with an audio channel), except  the ones on the neverMuteList
-                else
-                {
-                    if (IsInNeverMuteList(audio_pname))
-                    {
-                        //LoggingEngine.LogLine($" [!] Process {audio_pname}({audio_pid}) skipped ", Color.BlueViolet);
-                        log_skipped += audio_pname + ", ";
-                    }
-                    else
-                    {
-                        // if not on mute list and 
-                        if (!m_isMuteConditionBackground)
-                        {
-                            // if minimize option AND iconic
-                            // TODO: fix multi window muting
-                            IntPtr handle = Process.GetProcessById(audio_pid).MainWindowHandle;//Error occurs for "Handle", not "MainWindowHandle"
-                            if (!IsIconic(handle))
-                            {
-                                // if minimize option AND NOT minimized: SKIP
-                                InlineMuteProcList(audio_proc_list, false, audio_pid);
-                                log_skipped += "[M]" + audio_pname + ", ";
-                            }
-                            else
-                            {
-                                InlineMuteProcList(audio_proc_list, true, audio_pid);
-                                log_muted += audio_pname + ", ";
-                            }
-                        }
-                        else
-                        {
-                            //if mute condition is background and not on mute list
-                            InlineMuteProcList(audio_proc_list, true, audio_pid);
-                            log_muted += audio_pname + ", ";
-                        }
-                    }
-                }
-            }
-
-            LoggingEngine.LogLine($"[+] Summary: skipped ({log_skipped}) and muted ({log_muted})");
         }
 
-
-        private void ReloadMuter()
+        private void RefreshProcessListQuiet()
         {
             LoggingEngine.Log("[R]", Color.Aqua, null, LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG);
             LoggingEngine.LOG_LEVEL_TYPE currentLogLevel = LoggingEngine.LogLevel;
             LoggingEngine.LogLevel = LoggingEngine.LOG_LEVEL_TYPE.LOG_NONE;
-            RunMuter(Environment.ProcessId);
+            RefreshProcessList();
             LoggingEngine.LogLevel = currentLogLevel;
-
-        }
-        private void MuterCallback(object state)
-        {
-            var result = m_processManager.GetJobThreadSafe();
-
-            if (result.Item1)
-            {
-                RunMuter(result.Item2);
-            }
-
-            //LoggingEngine.LogLine("Tick - " + result.ToString());
         }
 
         private void EnableAutoStart(bool isEnabled)
@@ -338,7 +199,6 @@ namespace WinBGMuter
                 ShortcutManager.CreateShortcut(this.Text, programPath, linkName, linkDir, programArgs);
                 LoggingEngine.LogLine($"Setting autostart @{linkDir} -> {linkName}");
             }
-
         }
 
         /// <summary>
@@ -354,7 +214,6 @@ namespace WinBGMuter
 
             Color bgcolor;
             Color fgcolor;
-
 
             foreach (Control c in parent.Controls)
             {
@@ -393,7 +252,6 @@ namespace WinBGMuter
 
                 c.BackColor = bgcolor;
                 c.ForeColor = fgcolor;
-
 
                 if (c.Controls.Count > 0)
                     SetDark(c, dark);
@@ -442,10 +300,6 @@ namespace WinBGMuter
             try
             {
                 m_processManager.CleanUp();
-                foreach (var pid in m_volumeMixer.GetPIDs())
-                {
-                    m_volumeMixer.SetApplicationMute(pid, false);
-                }
             }
             catch (Exception ex)
             {
@@ -480,10 +334,6 @@ namespace WinBGMuter
             ConsoleLogging_CheckedChanged(sender, EventArgs.Empty);
             DarkModeCheckbox_CheckedChanged(sender, EventArgs.Empty);
             AutostartCheckbox_CheckedChanged(sender, EventArgs.Empty);
-
-            // Load muting enabled setting
-            m_enableMuting = Properties.Settings.Default.EnableMuting;
-
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -498,7 +348,7 @@ namespace WinBGMuter
                 NeverMuteTextBox.Text = m_neverMuteList;
                 LoggerCheckbox.Checked = Properties.Settings.Default.EnableLogging;
                 LoggerCheckbox_CheckedChanged(sender, EventArgs.Empty);
-              
+
                 m_processManager = new ForegroundProcessManager();
                 m_processManager.Init();
 
@@ -509,8 +359,6 @@ namespace WinBGMuter
             m_processManager = new ForegroundProcessManager();
 
             ReloadSettings(sender, e);
-
-            MuterTimer.Enabled = true;
 
             m_processManager.Init();
 
@@ -529,8 +377,6 @@ namespace WinBGMuter
 
             System.Diagnostics.FileVersionInfo fvi = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
 
-
-
             this.Text += " - v" + fvi.ProductVersion;
 
             m_keepAliveTimer.Elapsed += KeepAliveTimer_Tick;
@@ -538,7 +384,6 @@ namespace WinBGMuter
             m_keepAliveTimer.Enabled = true;
 
             InitializePauseOnUnfocus();
-
         }
 
         private void Default_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -551,15 +396,12 @@ namespace WinBGMuter
         {
             string[] neverMuteList = m_neverMuteList.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-
             NeverMuteListBox.Items.Clear();
 
             foreach (string neverMuteEntry in neverMuteList)
             {
                 NeverMuteListBox.Items.Add(neverMuteEntry.Trim());
             }
-
-
         }
 
         /// <summary>
@@ -602,7 +444,6 @@ namespace WinBGMuter
                     SaveChangesButton_Click(sender, e);
                 }
             }
-
         }
 
         private void NeverMuteTextBox_TextChanged(object sender, EventArgs e)
@@ -610,7 +451,7 @@ namespace WinBGMuter
             PopulateNeverMuteListBox();
             m_neverMuteList = NeverMuteTextBox.Text;
             Properties.Settings.Default.NeverMuteProcs = m_neverMuteList;
-            ReloadMuter();
+            RefreshProcessListQuiet();
         }
 
         private void SaveChangesButton_Click(object sender, EventArgs e)
@@ -618,7 +459,6 @@ namespace WinBGMuter
             Properties.Settings.Default.Save();
             m_settingsChanged = false;
             this.SaveChangesButton.Enabled = false;
-
         }
 
         private void MainForm_Resize(object sender, EventArgs e)
@@ -665,11 +505,7 @@ namespace WinBGMuter
 
         private void MuterTimer_Tick(object sender, EventArgs e)
         {
-            if (!m_enableMuting)
-            {
-                return;
-            }
-            MuterCallback((sender, e));
+            RefreshProcessList();
         }
 
         private void CloseMenuTray_Click(object sender, EventArgs e)
@@ -694,7 +530,6 @@ namespace WinBGMuter
             {
                 LoggingEngine.SetEngine(InternalLog, InternalLogLine);
             }
-
         }
 
         private void DarkModeCheckbox_CheckedChanged(object sender, EventArgs e)
@@ -705,7 +540,6 @@ namespace WinBGMuter
                 SetDark(this, true);
             else
                 SetDark(this, false);
-
         }
 
         private void AutostartCheckbox_CheckedChanged(object sender, EventArgs e)
@@ -726,13 +560,11 @@ namespace WinBGMuter
         {
             m_volumeMixer.UnloadAudio(true);
             m_volumeMixer.ReloadAudio(true);
-            ReloadMuter();
-
+            RefreshProcessListQuiet();
         }
 
         private void ProcessToMuteButton_Click(object sender, EventArgs e)
         {
-
             try
             {
                 NeverMuteTextBox.AppendText("," + ProcessListListBox.Items[ProcessListListBox.SelectedIndex]);
@@ -749,10 +581,8 @@ namespace WinBGMuter
 
         private void MuteToProcessButton_Click(object sender, EventArgs e)
         {
-
             try
             {
-
                 if (NeverMuteListBox.SelectedIndex != -1)
                     NeverMuteListBox.Items.RemoveAt(NeverMuteListBox.SelectedIndex);
 
@@ -764,15 +594,11 @@ namespace WinBGMuter
 
                 NeverMuteTextBox.Text = newText;
 
-
                 NeverMuteTextBox_TextChanged(sender, EventArgs.Empty);
             }
-
-
             catch (Exception ex)
             {
             }
-
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -783,7 +609,6 @@ namespace WinBGMuter
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
             MessageBox.Show(@"                                                                      
 Background Muter - Automatically mute background applications                  
 Copyright(C) 2022  Nefares(nefares@protonmail.com) github.com / nefares       
@@ -802,7 +627,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License             
 along with this program.If not, see < https://www.gnu.org/licenses/>          
 ", "About", MessageBoxButtons.OK);
-
         }
 
         private void tableLayoutPanel3_Paint(object sender, PaintEventArgs e)
@@ -810,19 +634,16 @@ along with this program.If not, see < https://www.gnu.org/licenses/>
 
         }
 
-
         private void BackGroundRadioButton_CheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.IsMuteConditionBackground = true;
             m_isMuteConditionBackground = true;
-            ReloadMuter();
         }
 
         private void MinimizedRadioButton_CheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.IsMuteConditionBackground = false;
             m_isMuteConditionBackground = false;
-            ReloadMuter();
         }
 
         private void AdvancedButton_MouseClick(object sender, MouseEventArgs e)

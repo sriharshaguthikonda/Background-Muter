@@ -9,9 +9,7 @@ namespace WinBGMuter.Abstractions
 
     public enum PolicyMode
     {
-        PauseOnly,
-        PauseThenMuteFallback,
-        MuteOnly
+        PauseOnly
     }
 
     public enum PolicyListMode
@@ -22,15 +20,11 @@ namespace WinBGMuter.Abstractions
 
     public sealed class PolicyDecision
     {
-        public PolicyDecision(IReadOnlyList<int> toPause, IReadOnlyList<int> toMute, PolicyMode mode)
+        public PolicyDecision(IReadOnlyList<int> toPause)
         {
             ToPause = toPause;
-            ToMute = toMute;
-            Mode = mode;
         }
 
         public IReadOnlyList<int> ToPause { get; }
-        public IReadOnlyList<int> ToMute { get; }
-        public PolicyMode Mode { get; }
     }
 }

@@ -19,7 +19,6 @@ namespace WinBGMuter.Controller
         private readonly GsmtcMediaController _mediaController;
         private readonly SessionResolver _sessionResolver;
         private readonly PauseAction _pauseAction;
-        private readonly MuteAction _muteAction;
         private readonly ActionPolicyEngine _policyEngine;
         private readonly PlaybackStateStore _stateStore;
 
@@ -30,7 +29,6 @@ namespace WinBGMuter.Controller
 
         public AppController(
             VolumeMixer volumeMixer,
-            PolicyMode policyMode = PolicyMode.PauseThenMuteFallback,
             float audibilityThreshold = 0.01f,
             IReadOnlyDictionary<string, string>? processNameToSessionHint = null,
             Func<IEnumerable<string>>? getNeverPauseList = null)
@@ -41,8 +39,7 @@ namespace WinBGMuter.Controller
             _mediaController = new GsmtcMediaController();
             _sessionResolver = new SessionResolver(_mediaController, processNameToSessionHint);
             _pauseAction = new PauseAction(_mediaController, _sessionResolver);
-            _muteAction = new MuteAction(volumeMixer);
-            _policyEngine = new ActionPolicyEngine(policyMode);
+            _policyEngine = new ActionPolicyEngine();
             _stateStore = new PlaybackStateStore();
 
             _foregroundTracker.ForegroundChanged += OnForegroundChanged;
@@ -126,7 +123,7 @@ namespace WinBGMuter.Controller
             // 2) Evaluate policy
             var decision = _policyEngine.Evaluate(foregroundPid, audiblePids, foregroundProcessName);
             
-            LoggingEngine.LogLine($"[AppController] Policy decision: ToPause={decision.ToPause.Count}, ToMute={decision.ToMute.Count}",
+            LoggingEngine.LogLine($"[AppController] Policy decision: ToPause={decision.ToPause.Count}",
                 category: LoggingEngine.LogCategory.Policy);
 
             // 3) Resume foreground if we paused it
@@ -140,11 +137,6 @@ namespace WinBGMuter.Controller
 
                 if (resumeResult == PauseResult.Success)
                 {
-                    _stateStore.Clear(foregroundPid);
-                }
-                else if (pausedState.Method == "mute")
-                {
-                    _muteAction.TryUnmute(foregroundPid);
                     _stateStore.Clear(foregroundPid);
                 }
             }
@@ -179,29 +171,11 @@ namespace WinBGMuter.Controller
                     LoggingEngine.LogLine($"[AppController] Paused {processName} (session: {pauseActionResult.SessionKey.Id})",
                         category: LoggingEngine.LogCategory.Policy);
                 }
-                else if (_policyEngine.Mode == PolicyMode.PauseThenMuteFallback)
-                {
-                    // Fallback to mute
-                    LoggingEngine.LogLine($"[AppController] Pause failed for {processName}, falling back to mute",
-                        category: LoggingEngine.LogCategory.Policy);
-                    if (_muteAction.TryMute(pid) == MuteResult.Success)
-                    {
-                        _stateStore.MarkPaused(pid, "mute", string.Empty);
-                    }
-                }
                 else
                 {
-                    LoggingEngine.LogLine($"[AppController] Pause failed for {processName}, no fallback (PauseOnly mode)",
+                    LoggingEngine.LogLine($"[AppController] Pause not supported for {processName}",
                         category: LoggingEngine.LogCategory.Policy,
                         loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
-                }
-            }
-
-            foreach (var pid in decision.ToMute)
-            {
-                if (_muteAction.TryMute(pid) == MuteResult.Success)
-                {
-                    _stateStore.MarkPaused(pid, "mute", string.Empty);
                 }
             }
 
