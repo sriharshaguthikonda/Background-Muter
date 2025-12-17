@@ -36,7 +36,7 @@ namespace WinBGMuter.Media
                     displayName: s.SourceAppUserModelId,
                     appId: s.SourceAppUserModelId,
                     playbackState: state,
-                    lastUpdated: info?.Controls?.PauseEnabled == true || info?.Controls?.PlayEnabled == true
+                    lastUpdated: info?.Controls?.IsPauseEnabled == true || info?.Controls?.IsPlayEnabled == true
                         ? DateTimeOffset.UtcNow
                         : DateTimeOffset.MinValue));
             }
