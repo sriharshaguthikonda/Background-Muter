@@ -21,6 +21,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Timers;
+using Microsoft.Extensions.Logging;
+using WinBGMuter.Logging;
 
 namespace WinBGMuter
 {
@@ -71,6 +73,8 @@ namespace WinBGMuter
         private bool m_enableDemo = false;
         private int m_errorCount = 0;
         private bool m_isMuteConditionBackground = true;
+
+        private readonly ILogger m_stateLogger = AppLogging.CreateLogger(LogCategories.State);
 
         // @todo untested whether this works
         private static string m_previous_fname = "wininit";
@@ -486,6 +490,7 @@ namespace WinBGMuter
         private void MainForm_Load(object sender, EventArgs e)
         {
             LoggingEngine.LogLevel = LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG;
+            AppLogging.SetMinimumLevelFromLegacy(LoggingEngine.LogLevel);
             LoggingEngine.HasDateTime = true;
             LoggingEngine.LogLine("Initializing...");
 
@@ -529,6 +534,8 @@ namespace WinBGMuter
 
 
             this.Text += " - v" + fvi.ProductVersion;
+
+            m_stateLogger.LogInformation("Background Muter UI initialized (file version: {FileVersion}, product version: {ProductVersion})", fvi.FileVersion, fvi.ProductVersion);
 
             m_keepAliveTimer.Elapsed += KeepAliveTimer_Tick;
             m_keepAliveTimer.AutoReset = true;

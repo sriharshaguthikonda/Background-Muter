@@ -17,6 +17,7 @@
 */
 
 using System.Diagnostics;
+using WinBGMuter.Logging;
 
 namespace WinBGMuter
 {
@@ -30,6 +31,13 @@ namespace WinBGMuter
         {
             Process myproc = Process.GetCurrentProcess();
             myproc.PriorityClass = ProcessPriorityClass.BelowNormal;
+
+            AppLogging.SetMinimumLevelFromLegacy(LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG);
+
+            var startupLogger = AppLogging.CreateLogger(LogCategories.State);
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version?.ToString() ?? "unknown";
+            startupLogger.LogInformation("Starting Background Muter (assembly version: {AssemblyVersion})", version);
 
             ApplicationConfiguration.Initialize();
             Application.Run(new MainForm(args));
