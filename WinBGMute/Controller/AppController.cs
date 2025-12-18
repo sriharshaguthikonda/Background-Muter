@@ -24,6 +24,9 @@ namespace WinBGMuter.Controller
 
         private readonly SemaphoreSlim _processingLock = new(1, 1);
         private bool _enabled = true;
+        private bool _autoPlaySpotify = false;
+        private System.Timers.Timer? _spotifyMonitorTimer;
+        private bool _spotifyPausedByUs = false;
 
         private Func<IEnumerable<string>>? _getNeverPauseList;
 
@@ -31,10 +34,12 @@ namespace WinBGMuter.Controller
             VolumeMixer volumeMixer,
             float audibilityThreshold = 0.01f,
             IReadOnlyDictionary<string, string>? processNameToSessionHint = null,
-            Func<IEnumerable<string>>? getNeverPauseList = null)
+            Func<IEnumerable<string>>? getNeverPauseList = null,
+            bool autoPlaySpotify = false)
         {
             _volumeMixer = volumeMixer;
             _getNeverPauseList = getNeverPauseList;
+            _autoPlaySpotify = autoPlaySpotify;
             _foregroundTracker = new WinEventForegroundTracker();
             _mediaController = new GsmtcMediaController();
             _sessionResolver = new SessionResolver(_mediaController, processNameToSessionHint);
@@ -51,16 +56,125 @@ namespace WinBGMuter.Controller
             set => _enabled = value;
         }
 
+        public bool AutoPlaySpotify
+        {
+            get => _autoPlaySpotify;
+            set
+            {
+                _autoPlaySpotify = value;
+                if (value)
+                {
+                    StartSpotifyMonitor();
+                }
+                else
+                {
+                    StopSpotifyMonitor();
+                }
+            }
+        }
+
         public void Start()
         {
             _foregroundTracker.Start();
+            if (_autoPlaySpotify)
+            {
+                StartSpotifyMonitor();
+            }
             LoggingEngine.LogLine("[AppController] Started", category: LoggingEngine.LogCategory.General);
         }
 
         public void Stop()
         {
             _foregroundTracker.Stop();
+            StopSpotifyMonitor();
             LoggingEngine.LogLine("[AppController] Stopped", category: LoggingEngine.LogCategory.General);
+        }
+
+        private void StartSpotifyMonitor()
+        {
+            if (_spotifyMonitorTimer != null)
+            {
+                return;
+            }
+
+            _spotifyMonitorTimer = new System.Timers.Timer(1000); // Check every 1 second
+            _spotifyMonitorTimer.Elapsed += async (s, e) => await OnSpotifyMonitorTickAsync();
+            _spotifyMonitorTimer.AutoReset = true;
+            _spotifyMonitorTimer.Start();
+            LoggingEngine.LogLine("[AutoPlaySpotify] Monitor started", category: LoggingEngine.LogCategory.MediaControl);
+        }
+
+        private void StopSpotifyMonitor()
+        {
+            if (_spotifyMonitorTimer == null)
+            {
+                return;
+            }
+
+            _spotifyMonitorTimer.Stop();
+            _spotifyMonitorTimer.Dispose();
+            _spotifyMonitorTimer = null;
+            _spotifyPausedByUs = false;
+            LoggingEngine.LogLine("[AutoPlaySpotify] Monitor stopped", category: LoggingEngine.LogCategory.MediaControl);
+        }
+
+        private async Task OnSpotifyMonitorTickAsync()
+        {
+            if (!_autoPlaySpotify)
+            {
+                return;
+            }
+
+            try
+            {
+                var sessions = await _mediaController.ListSessionsAsync().ConfigureAwait(false);
+
+                var spotifySession = sessions.FirstOrDefault(s => IsSpotifySession(s));
+                if (spotifySession == null)
+                {
+                    return;
+                }
+
+                // Check if any non-Spotify app is currently playing
+                var otherPlaying = sessions.Any(s =>
+                    s.PlaybackState == MediaPlaybackState.Playing &&
+                    !IsSpotifySession(s));
+
+                if (otherPlaying)
+                {
+                    // Another app is playing - pause Spotify if it's playing
+                    if (spotifySession.PlaybackState == MediaPlaybackState.Playing)
+                    {
+                        var result = await _mediaController.TryPauseAsync(spotifySession.Key).ConfigureAwait(false);
+                        if (result == MediaControlResult.Success)
+                        {
+                            _spotifyPausedByUs = true;
+                            LoggingEngine.LogLine("[AutoPlaySpotify] Paused Spotify (other app started playing)",
+                                category: LoggingEngine.LogCategory.MediaControl);
+                        }
+                    }
+                }
+                else
+                {
+                    // No other app is playing - resume Spotify if we paused it or if it's not playing
+                    if (spotifySession.PlaybackState != MediaPlaybackState.Playing)
+                    {
+                        var result = await _mediaController.TryPlayAsync(spotifySession.Key).ConfigureAwait(false);
+                        if (result == MediaControlResult.Success)
+                        {
+                            _spotifyPausedByUs = false;
+                            LoggingEngine.LogLine("[AutoPlaySpotify] Resumed Spotify (no other app playing)",
+                                category: LoggingEngine.LogCategory.MediaControl);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingEngine.LogLine($"[AutoPlaySpotify] Monitor error: {ex.Message}",
+                    category: LoggingEngine.LogCategory.MediaControl,
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+            }
         }
 
         private async void OnForegroundChanged(object? sender, ForegroundChangedEventArgs e)
@@ -183,6 +297,13 @@ namespace WinBGMuter.Controller
             _stateStore.CleanupExitedProcesses();
         }
 
+        private static bool IsSpotifySession(MediaSessionInfo session)
+        {
+            var appId = session.AppId?.ToLowerInvariant() ?? string.Empty;
+            var displayName = session.DisplayName?.ToLowerInvariant() ?? string.Empty;
+            return appId.Contains("spotify") || displayName.Contains("spotify");
+        }
+
         private static string GetProcessName(int pid)
         {
             try
@@ -197,6 +318,7 @@ namespace WinBGMuter.Controller
 
         public void Dispose()
         {
+            StopSpotifyMonitor();
             _foregroundTracker.ForegroundChanged -= OnForegroundChanged;
             _foregroundTracker.Dispose();
             _processingLock.Dispose();

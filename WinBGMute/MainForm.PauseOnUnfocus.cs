@@ -14,6 +14,7 @@ namespace WinBGMuter
         private PauseOnUnfocusSettings? _pauseSettings;
 
         private CheckBox? _pauseOnUnfocusCheckbox;
+        private CheckBox? _autoPlaySpotifyCheckbox;
         private GroupBox? _pauseSettingsGroupBox;
 
         private void InitializePauseOnUnfocus()
@@ -28,11 +29,14 @@ namespace WinBGMuter
                 return;
             }
 
+            var autoPlaySpotify = Properties.Settings.Default.AutoPlaySpotify;
+
             _appController = new AppController(
                 m_volumeMixer,
                 _pauseSettings.AudibilityThreshold,
                 null,
-                GetNeverPauseList);
+                GetNeverPauseList,
+                autoPlaySpotify);
 
             _appController.Enabled = _pauseSettings.Enabled;
 
@@ -61,7 +65,7 @@ namespace WinBGMuter
             {
                 Text = "🔊 Audio Control",
                 Dock = DockStyle.Bottom,
-                Height = 60,
+                Height = 85,
                 Padding = new Padding(3)
             };
 
@@ -86,7 +90,21 @@ namespace WinBGMuter
                 OnPauseOnUnfocusToggled(_pauseOnUnfocusCheckbox.Checked);
             };
 
+            // Auto-play Spotify checkbox
+            _autoPlaySpotifyCheckbox = new CheckBox
+            {
+                Text = "Auto-play Spotify when idle",
+                Checked = Properties.Settings.Default.AutoPlaySpotify,
+                AutoSize = true,
+                Margin = new Padding(3, 2, 3, 2)
+            };
+            _autoPlaySpotifyCheckbox.CheckedChanged += (s, e) =>
+            {
+                OnAutoPlaySpotifyToggled(_autoPlaySpotifyCheckbox.Checked);
+            };
+
             innerPanel.Controls.Add(_pauseOnUnfocusCheckbox);
+            innerPanel.Controls.Add(_autoPlaySpotifyCheckbox);
 
             _pauseSettingsGroupBox.Controls.Add(innerPanel);
 
@@ -137,6 +155,19 @@ namespace WinBGMuter
             }
 
             _pauseSettings.Save();
+        }
+
+        private void OnAutoPlaySpotifyToggled(bool enabled)
+        {
+            Properties.Settings.Default.AutoPlaySpotify = enabled;
+
+            if (_appController != null)
+            {
+                _appController.AutoPlaySpotify = enabled;
+            }
+
+            LoggingEngine.LogLine($"[AutoPlaySpotify] {(enabled ? "Enabled" : "Disabled")}",
+                category: LoggingEngine.LogCategory.General);
         }
 
         private void CleanupPauseOnUnfocus()
