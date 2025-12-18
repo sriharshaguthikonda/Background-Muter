@@ -146,8 +146,6 @@ namespace WinBGMuter.Controller
 
             try
             {
-                await EnsureCooldownAsync().ConfigureAwait(false);
-
                 var sessions = await _mediaController.ListSessionsAsync().ConfigureAwait(false);
 
                 var targetSession = sessions.FirstOrDefault(s => IsTargetAppSession(s));
@@ -160,6 +158,11 @@ namespace WinBGMuter.Controller
                 var otherPlaying = sessions.Any(s =>
                     s.PlaybackState == MediaPlaybackState.Playing &&
                     !IsTargetAppSession(s));
+
+                if (otherPlaying)
+                {
+                    ResetCooldownWindow();
+                }
 
                 if (otherPlaying)
                 {
@@ -177,6 +180,9 @@ namespace WinBGMuter.Controller
                 }
                 else
                 {
+                    // Wait until the cooldown window has been quiet
+                    await WaitForCooldownAsync().ConfigureAwait(false);
+
                     // No other app is playing - resume target app if it's not playing
                     if (targetSession.PlaybackState != MediaPlaybackState.Playing)
                     {
@@ -233,7 +239,8 @@ namespace WinBGMuter.Controller
 
         private async Task ProcessForegroundChangeAsync(ForegroundChangedEventArgs e)
         {
-            await EnsureCooldownAsync().ConfigureAwait(false);
+            ResetCooldownWindow();
+            await WaitForCooldownAsync().ConfigureAwait(false);
 
             var foregroundPid = e.CurrentPid;
             string foregroundProcessName = "<unknown>";
@@ -320,13 +327,16 @@ namespace WinBGMuter.Controller
             _stateStore.CleanupExitedProcesses();
         }
 
-        private async Task EnsureCooldownAsync()
+        private void ResetCooldownWindow()
         {
-            // Sliding cooldown: each caller pushes the deadline out; waits until there has been
-            // a full cooldown window with no new activity.
             var newDeadline = DateTimeOffset.UtcNow.AddMilliseconds(_pauseCooldownMs).ToUnixTimeMilliseconds();
             Interlocked.Exchange(ref _cooldownDeadlineMs, newDeadline);
+        }
 
+        private async Task WaitForCooldownAsync()
+        {
+            // Wait until deadline has passed with no newer activity.
+            // If another activity arrives, its reset pushes the deadline out.
             while (true)
             {
                 var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
