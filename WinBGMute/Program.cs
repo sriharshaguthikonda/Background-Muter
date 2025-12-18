@@ -17,6 +17,7 @@
 */
 
 using System.Diagnostics;
+using WinBGMuter.Config;
 
 namespace WinBGMuter
 {
@@ -31,6 +32,7 @@ namespace WinBGMuter
             Process myproc = Process.GetCurrentProcess();
             myproc.PriorityClass = ProcessPriorityClass.BelowNormal;
 
+            SettingsFileStore.Load();
             ApplicationConfiguration.Initialize();
             Application.Run(new MainForm(args));
         }

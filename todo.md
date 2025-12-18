@@ -3,9 +3,11 @@
 - Shift focus: implement pause/resume (not mute) for background sessions.
 
 ### 1) UX & Controls.
-- [ ] Tray icon state: show when pausing is active vs. snoozed/disabled.
+- [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
 - [ ] Exceptions UI: allow adding/removing apps that should never be paused (e.g., music/voice apps).
 - [ ] Onboarding note in-app: explain pause-on-unfocus behavior and how to whitelist apps.
+- [ ] save settings to file and load it when app loads.
+- [ ] settings option to close/minimize to tray.
 
 ### 2) Pause Logic
 - [ ] Core: pause media sessions when window loses focus; resume on regain.

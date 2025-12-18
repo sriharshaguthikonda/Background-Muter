@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Timers;
+using WinBGMuter.Config;
 
 namespace WinBGMuter
 {
@@ -457,6 +458,7 @@ namespace WinBGMuter
         private void SaveChangesButton_Click(object sender, EventArgs e)
         {
             Properties.Settings.Default.Save();
+            SettingsFileStore.Save();
             m_settingsChanged = false;
             this.SaveChangesButton.Enabled = false;
         }

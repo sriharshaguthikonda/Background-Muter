@@ -63,6 +63,7 @@ namespace WinBGMuter.Config
                 Properties.Settings.Default[SettingKeyAudibilityThreshold] = AudibilityThreshold;
                 Properties.Settings.Default[SettingKeyPauseCooldownMs] = PauseCooldownMs;
                 Properties.Settings.Default.Save();
+                SettingsFileStore.Save();
             }
             catch
             {
