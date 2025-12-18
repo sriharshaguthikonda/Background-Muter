@@ -352,6 +352,20 @@ namespace WinBGMuter
         {
             LoggingEngine.LogLevel = LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG;
             LoggingEngine.HasDateTime = true;
+            
+            // Initialize logging engine with correct output target
+            if (Properties.Settings.Default.EnableConsole)
+            {
+                LoggingEngine.RestoreDefault();
+            }
+            else
+            {
+                LoggingEngine.SetEngine(InternalLog, InternalLogLine);
+            }
+            
+            // Enable logging if the setting is on
+            LoggingEngine.Enabled = Properties.Settings.Default.EnableLogging;
+            
             LoggingEngine.LogLine("Initializing...");
 
             if (m_enableDemo == true)

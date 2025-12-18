@@ -452,15 +452,16 @@ namespace WinBGMuter
             tableLayoutPanel5.Margin = new Padding(3, 4, 3, 4);
             tableLayoutPanel5.Name = "tableLayoutPanel5";
             tableLayoutPanel5.RowCount = 8;
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 85F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 29F));
-            tableLayoutPanel5.Size = new Size(151, 280);
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel5.AutoSize = true;
+            tableLayoutPanel5.AutoScroll = true;
             tableLayoutPanel5.TabIndex = 0;
             // 
             // ConsoleLogging
