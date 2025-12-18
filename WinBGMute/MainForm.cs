@@ -495,7 +495,7 @@ namespace WinBGMuter
                 this.WindowState = FormWindowState.Minimized;
                 Hide();
                 TrayIcon.Visible = true;
-                TrayIcon.ShowBalloonTip(2000);
+                TrayIcon.ShowBalloonTip(7000);
             }
         }
 
@@ -601,7 +601,7 @@ private void ConsoleLogging_CheckedChanged(object sender, EventArgs e)
                 this.WindowState = FormWindowState.Minimized;
                 Hide();
                 TrayIcon.Visible = true;
-                TrayIcon.ShowBalloonTip(2000);
+                TrayIcon.ShowBalloonTip(7000);
             }
         }
 

@@ -30,7 +30,7 @@ namespace WinBGMuter.Controller
         private bool _autoPlayAppPausedByUs = false;
 
         private Func<IEnumerable<string>>? _getNeverPauseList;
-        private int _pauseCooldownMs = 2000;
+        private int _pauseCooldownMs = 7000;
         private long _cooldownDeadlineMs = 0;
 
         public AppController(
@@ -40,7 +40,7 @@ namespace WinBGMuter.Controller
             Func<IEnumerable<string>>? getNeverPauseList = null,
             bool autoPlaySpotify = false,
             string autoPlayAppName = "Spotify",
-            int pauseCooldownMs = 2000)
+            int pauseCooldownMs = 7000)
         {
             _volumeMixer = volumeMixer;
             _getNeverPauseList = getNeverPauseList;

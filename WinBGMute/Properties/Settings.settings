@@ -30,7 +30,7 @@
       <Value Profile="(Default)">Spotify</Value>
     </Setting>
     <Setting Name="PauseCooldownMs" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">2000</Value>
+      <Value Profile="(Default)">7000</Value>
     </Setting>
     <Setting Name="MinimizeToTray" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
