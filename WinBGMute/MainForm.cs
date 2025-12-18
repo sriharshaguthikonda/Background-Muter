@@ -152,6 +152,8 @@ namespace WinBGMuter
             // get a process PID list of processes with an audio channel
             int[] audio_pids = m_volumeMixer.GetPIDs();
 
+            var autoPlayApp = Properties.Settings.Default.AutoPlayAppName?.Trim() ?? string.Empty;
+
             foreach (var pid in audio_pids)
             {
                 try
@@ -159,10 +161,17 @@ namespace WinBGMuter
                     Process proc = Process.GetProcessById(pid);
                     string pname = proc.ProcessName;
 
-                    if (!NeverMuteListBox.Items.Contains(pname))
+                    // Exclusive: skip if in NeverMute or AutoPlay
+                    if (NeverMuteListBox.Items.Contains(pname))
                     {
-                        ProcessListListBox.Items.Add(pname);
+                        continue;
                     }
+                    if (string.Equals(pname, autoPlayApp, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    ProcessListListBox.Items.Add(pname);
                 }
                 catch (Exception ex)
                 {
@@ -569,7 +578,16 @@ namespace WinBGMuter
         {
             try
             {
-                NeverMuteTextBox.AppendText("," + ProcessListListBox.Items[ProcessListListBox.SelectedIndex]);
+                var selectedApp = ProcessListListBox.Items[ProcessListListBox.SelectedIndex]?.ToString();
+                if (string.IsNullOrEmpty(selectedApp))
+                {
+                    return;
+                }
+
+                // Remove from AutoPlay if present (exclusive)
+                RemoveFromAutoPlayList(selectedApp);
+
+                NeverMuteTextBox.AppendText("," + selectedApp);
                 NeverMuteTextBox_TextChanged(sender, EventArgs.Empty);
 
                 if (ProcessListListBox.SelectedIndex != -1)
@@ -578,6 +596,22 @@ namespace WinBGMuter
             catch (Exception ex)
             {
 
+            }
+        }
+
+        private void RemoveFromAutoPlayList(string appName)
+        {
+            var currentAutoPlay = Properties.Settings.Default.AutoPlayAppName?.Trim() ?? string.Empty;
+            if (string.Equals(currentAutoPlay, appName, StringComparison.OrdinalIgnoreCase))
+            {
+                Properties.Settings.Default.AutoPlayAppName = string.Empty;
+                if (_appController != null)
+                {
+                    _appController.AutoPlayAppName = string.Empty;
+                }
+                // Refresh the AutoPlay list UI if it exists
+                _autoPlayListBox?.Items.Clear();
+                SettingsFileStore.Save();
             }
         }
 

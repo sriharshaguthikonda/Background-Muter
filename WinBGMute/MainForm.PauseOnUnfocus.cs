@@ -55,6 +55,7 @@ namespace WinBGMuter
             _trayBaseIcon ??= TrayIcon?.Icon;
             SetupPauseOnUnfocusTrayMenu();
             SetupPauseOnUnfocusUIPanel();
+            SetupAutoPlayListUI();
             UpdateTrayIconPauseState();
 
             LoggingEngine.LogLine($"[PauseOnUnfocus] Initialized (Enabled={_pauseSettings.Enabled}, Mode={_pauseSettings.Mode})",
@@ -102,7 +103,7 @@ namespace WinBGMuter
             // Auto-play app checkbox
             _autoPlaySpotifyCheckbox = new CheckBox
             {
-                Text = "Auto-play app when idle:",
+                Text = "Enable Auto-play when idle",
                 Checked = Properties.Settings.Default.AutoPlaySpotify,
                 AutoSize = true,
                 Margin = new Padding(3, 2, 3, 2)
@@ -110,18 +111,6 @@ namespace WinBGMuter
             _autoPlaySpotifyCheckbox.CheckedChanged += (s, e) =>
             {
                 OnAutoPlaySpotifyToggled(_autoPlaySpotifyCheckbox.Checked);
-            };
-
-            // App name text box
-            _autoPlayAppTextBox = new TextBox
-            {
-                Text = Properties.Settings.Default.AutoPlayAppName,
-                Width = 150,
-                Margin = new Padding(20, 2, 3, 2)
-            };
-            _autoPlayAppTextBox.TextChanged += (s, e) =>
-            {
-                OnAutoPlayAppNameChanged(_autoPlayAppTextBox.Text);
             };
 
             // Cooldown input
@@ -148,7 +137,6 @@ namespace WinBGMuter
 
             innerPanel.Controls.Add(_pauseOnUnfocusCheckbox);
             innerPanel.Controls.Add(_autoPlaySpotifyCheckbox);
-            innerPanel.Controls.Add(_autoPlayAppTextBox);
             innerPanel.Controls.Add(cooldownLabel);
             innerPanel.Controls.Add(_pauseCooldownNumeric);
 
