@@ -77,6 +77,8 @@ namespace WinBGMuter
             ConsoleLogging = new CheckBox();
             LoggerCheckbox = new CheckBox();
             DarkModeCheckbox = new CheckBox();
+            MinimizeToTrayCheckbox = new CheckBox();
+            CloseToTrayCheckbox = new CheckBox();
             AutostartCheckbox = new CheckBox();
             MuteConditionGroupBox = new GroupBox();
             MinimizedRadioButton = new RadioButton();
@@ -437,23 +439,27 @@ namespace WinBGMuter
             // 
             tableLayoutPanel5.ColumnCount = 1;
             tableLayoutPanel5.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            tableLayoutPanel5.Controls.Add(ConsoleLogging, 0, 1);
-            tableLayoutPanel5.Controls.Add(LoggerCheckbox, 0, 1);
             tableLayoutPanel5.Controls.Add(DarkModeCheckbox, 0, 0);
-            tableLayoutPanel5.Controls.Add(AutostartCheckbox, 0, 3);
-            tableLayoutPanel5.Controls.Add(MuteConditionGroupBox, 0, 4);
-            tableLayoutPanel5.Controls.Add(AdvancedButton, 0, 5);
+            tableLayoutPanel5.Controls.Add(ConsoleLogging, 0, 1);
+            tableLayoutPanel5.Controls.Add(LoggerCheckbox, 0, 2);
+            tableLayoutPanel5.Controls.Add(MinimizeToTrayCheckbox, 0, 3);
+            tableLayoutPanel5.Controls.Add(CloseToTrayCheckbox, 0, 4);
+            tableLayoutPanel5.Controls.Add(AutostartCheckbox, 0, 5);
+            tableLayoutPanel5.Controls.Add(MuteConditionGroupBox, 0, 6);
+            tableLayoutPanel5.Controls.Add(AdvancedButton, 0, 7);
             tableLayoutPanel5.Dock = DockStyle.Fill;
             tableLayoutPanel5.Location = new Point(3, 24);
             tableLayoutPanel5.Margin = new Padding(3, 4, 3, 4);
             tableLayoutPanel5.Name = "tableLayoutPanel5";
-            tableLayoutPanel5.RowCount = 6;
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 33F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 33F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 33F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 91F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 33F));
+            tableLayoutPanel5.RowCount = 8;
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 85F));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 29F));
             tableLayoutPanel5.Size = new Size(151, 280);
             tableLayoutPanel5.TabIndex = 0;
             // 
@@ -496,10 +502,36 @@ namespace WinBGMuter
             DarkModeCheckbox.UseVisualStyleBackColor = true;
             DarkModeCheckbox.CheckedChanged += DarkModeCheckbox_CheckedChanged;
             // 
+            // MinimizeToTrayCheckbox
+            // 
+            MinimizeToTrayCheckbox.AutoSize = true;
+            MinimizeToTrayCheckbox.Dock = DockStyle.Fill;
+            MinimizeToTrayCheckbox.Location = new Point(3, 103);
+            MinimizeToTrayCheckbox.Margin = new Padding(3, 4, 3, 4);
+            MinimizeToTrayCheckbox.Name = "MinimizeToTrayCheckbox";
+            MinimizeToTrayCheckbox.Size = new Size(145, 22);
+            MinimizeToTrayCheckbox.TabIndex = 18;
+            MinimizeToTrayCheckbox.Text = "Minimize to tray";
+            MinimizeToTrayCheckbox.UseVisualStyleBackColor = true;
+            MinimizeToTrayCheckbox.CheckedChanged += MinimizeToTrayCheckbox_CheckedChanged;
+            // 
+            // CloseToTrayCheckbox
+            // 
+            CloseToTrayCheckbox.AutoSize = true;
+            CloseToTrayCheckbox.Dock = DockStyle.Fill;
+            CloseToTrayCheckbox.Location = new Point(3, 133);
+            CloseToTrayCheckbox.Margin = new Padding(3, 4, 3, 4);
+            CloseToTrayCheckbox.Name = "CloseToTrayCheckbox";
+            CloseToTrayCheckbox.Size = new Size(145, 22);
+            CloseToTrayCheckbox.TabIndex = 19;
+            CloseToTrayCheckbox.Text = "Close to tray";
+            CloseToTrayCheckbox.UseVisualStyleBackColor = true;
+            CloseToTrayCheckbox.CheckedChanged += CloseToTrayCheckbox_CheckedChanged;
+            // 
             // AutostartCheckbox
             // 
             AutostartCheckbox.AutoSize = true;
-            AutostartCheckbox.Location = new Point(3, 103);
+            AutostartCheckbox.Location = new Point(3, 163);
             AutostartCheckbox.Margin = new Padding(3, 4, 3, 4);
             AutostartCheckbox.Name = "AutostartCheckbox";
             AutostartCheckbox.Size = new Size(141, 24);
@@ -513,7 +545,7 @@ namespace WinBGMuter
             MuteConditionGroupBox.Controls.Add(MinimizedRadioButton);
             MuteConditionGroupBox.Controls.Add(BackGroundRadioButton);
             MuteConditionGroupBox.Dock = DockStyle.Fill;
-            MuteConditionGroupBox.Location = new Point(3, 138);
+            MuteConditionGroupBox.Location = new Point(3, 198);
             MuteConditionGroupBox.Margin = new Padding(3, 4, 3, 4);
             MuteConditionGroupBox.Name = "MuteConditionGroupBox";
             MuteConditionGroupBox.Padding = new Padding(3, 4, 3, 4);
@@ -552,7 +584,7 @@ namespace WinBGMuter
             // 
             AdvancedButton.AutoSize = true;
             AdvancedButton.Dock = DockStyle.Fill;
-            AdvancedButton.Location = new Point(3, 229);
+            AdvancedButton.Location = new Point(3, 292);
             AdvancedButton.Margin = new Padding(3, 4, 3, 4);
             AdvancedButton.Name = "AdvancedButton";
             AdvancedButton.Size = new Size(145, 47);
@@ -659,10 +691,12 @@ namespace WinBGMuter
             Margin = new Padding(3, 4, 3, 4);
             Name = "MainForm";
             Text = "Background Muter (GUI)";
+            FormClosing += MainForm_FormClosing;
             FormClosed += MainForm_FormClosed;
             Load += MainForm_Load;
             Shown += MainForm_Shown;
             Resize += MainForm_Resize;
+
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             tableLayoutPanel1.ResumeLayout(false);
@@ -724,7 +758,10 @@ namespace WinBGMuter
         private CheckBox DarkModeCheckbox;
         private CheckBox ConsoleLogging;
         private CheckBox LoggerCheckbox;
+        private CheckBox MinimizeToTrayCheckbox;
+        private CheckBox CloseToTrayCheckbox;
         private CheckBox AutostartCheckbox;
+
         private GroupBox MuteConditionGroupBox;
         private RadioButton MinimizedRadioButton;
         private RadioButton BackGroundRadioButton;

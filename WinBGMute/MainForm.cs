@@ -326,6 +326,8 @@ namespace WinBGMuter
             ConsoleLogging.Checked = Properties.Settings.Default.EnableConsole;
             DarkModeCheckbox.Checked = Properties.Settings.Default.EnableDarkMode;
             AutostartCheckbox.Checked = Properties.Settings.Default.EnableAutostart;
+            MinimizeToTrayCheckbox.Checked = Properties.Settings.Default.MinimizeToTray;
+            CloseToTrayCheckbox.Checked = Properties.Settings.Default.CloseToTray;
 
             if (Properties.Settings.Default.IsMuteConditionBackground == true)
             {
@@ -474,7 +476,7 @@ namespace WinBGMuter
 
         private void MainForm_Resize(object sender, EventArgs e)
         {
-            if (this.WindowState == FormWindowState.Minimized)
+            if (this.WindowState == FormWindowState.Minimized && Properties.Settings.Default.MinimizeToTray)
             {
                 this.WindowState = FormWindowState.Minimized;
                 Hide();
@@ -509,30 +511,30 @@ namespace WinBGMuter
                 LoggingEngine.Enabled = false;
 
 
-                //this.Size = new Size(this.Size.Width, this.Size.Height - 100);
 
-            }
-        }
+        //this.Size = new Size(this.Size.Width, this.Size.Height - 100);
 
-        private void MuterTimer_Tick(object sender, EventArgs e)
-        {
-            RefreshProcessList();
-        }
+    }
+}
 
-        private void CloseMenuTray_Click(object sender, EventArgs e)
-        {
-            this.Close();
-        }
+private void MuterTimer_Tick(object sender, EventArgs e)
+{
+    RefreshProcessList();
+}
 
-        private void OpenMenuTray_Click(object sender, EventArgs e)
-        {
-            TrayIcon_DoubleClick(sender, e);
-        }
+private void CloseMenuTray_Click(object sender, EventArgs e)
+{
+    Application.Exit();
+}
 
-        private void ConsoleLogging_CheckedChanged(object sender, EventArgs e)
-        {
-            Properties.Settings.Default.EnableConsole = ConsoleLogging.Checked;
+private void OpenMenuTray_Click(object sender, EventArgs e)
+{
+    TrayIcon_DoubleClick(sender, e);
+}
 
+private void ConsoleLogging_CheckedChanged(object sender, EventArgs e)
+{
+    Properties.Settings.Default.EnableConsole = ConsoleLogging.Checked;
             if (ConsoleLogging.Checked)
             {
                 LoggingEngine.RestoreDefault();
@@ -564,6 +566,28 @@ namespace WinBGMuter
             else
             {
                 EnableAutoStart(false);
+            }
+        }
+
+        private void MinimizeToTrayCheckbox_CheckedChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.MinimizeToTray = MinimizeToTrayCheckbox.Checked;
+        }
+
+        private void CloseToTrayCheckbox_CheckedChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.CloseToTray = CloseToTrayCheckbox.Checked;
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (Properties.Settings.Default.CloseToTray && e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                this.WindowState = FormWindowState.Minimized;
+                Hide();
+                TrayIcon.Visible = true;
+                TrayIcon.ShowBalloonTip(2000);
             }
         }
 
