@@ -16,6 +16,7 @@ namespace WinBGMuter
         private CheckBox? _pauseOnUnfocusCheckbox;
         private CheckBox? _autoPlaySpotifyCheckbox;
         private TextBox? _autoPlayAppTextBox;
+        private NumericUpDown? _pauseCooldownNumeric;
         private GroupBox? _pauseSettingsGroupBox;
 
         private void InitializePauseOnUnfocus()
@@ -39,7 +40,8 @@ namespace WinBGMuter
                 null,
                 GetNeverPauseList,
                 autoPlaySpotify,
-                autoPlayAppName);
+                autoPlayAppName,
+                _pauseSettings.PauseCooldownMs);
 
             _appController.Enabled = _pauseSettings.Enabled;
 
@@ -68,7 +70,7 @@ namespace WinBGMuter
             {
                 Text = "🔊 Audio Control",
                 Dock = DockStyle.Bottom,
-                Height = 110,
+                Height = 140,
                 Padding = new Padding(3)
             };
 
@@ -118,9 +120,33 @@ namespace WinBGMuter
                 OnAutoPlayAppNameChanged(_autoPlayAppTextBox.Text);
             };
 
+            // Cooldown input
+            _pauseCooldownNumeric = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 600000,
+                Increment = 100,
+                Value = Math.Max(_pauseSettings.PauseCooldownMs, 0),
+                Width = 120,
+                Margin = new Padding(3, 2, 3, 2)
+            };
+            _pauseCooldownNumeric.ValueChanged += (s, e) =>
+            {
+                OnPauseCooldownChanged((int)_pauseCooldownNumeric.Value);
+            };
+
+            var cooldownLabel = new Label
+            {
+                Text = "Cooldown (ms):",
+                AutoSize = true,
+                Margin = new Padding(3, 6, 3, 2)
+            };
+
             innerPanel.Controls.Add(_pauseOnUnfocusCheckbox);
             innerPanel.Controls.Add(_autoPlaySpotifyCheckbox);
             innerPanel.Controls.Add(_autoPlayAppTextBox);
+            innerPanel.Controls.Add(cooldownLabel);
+            innerPanel.Controls.Add(_pauseCooldownNumeric);
 
             _pauseSettingsGroupBox.Controls.Add(innerPanel);
 
@@ -197,6 +223,23 @@ namespace WinBGMuter
 
             LoggingEngine.LogLine($"[AutoPlay] App changed to: {appName}",
                 category: LoggingEngine.LogCategory.General);
+        }
+
+        private void OnPauseCooldownChanged(int cooldownMs)
+        {
+            if (_pauseSettings == null)
+            {
+                return;
+            }
+
+            _pauseSettings.PauseCooldownMs = cooldownMs;
+
+            if (_appController != null)
+            {
+                _appController.PauseCooldownMs = cooldownMs;
+            }
+
+            _pauseSettings.Save();
         }
 
         private void CleanupPauseOnUnfocus()

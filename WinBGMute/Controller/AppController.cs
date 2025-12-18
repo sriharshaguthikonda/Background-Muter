@@ -21,6 +21,7 @@ namespace WinBGMuter.Controller
         private readonly PauseAction _pauseAction;
         private readonly ActionPolicyEngine _policyEngine;
         private readonly PlaybackStateStore _stateStore;
+        private readonly SemaphoreSlim _cooldownLock = new(1, 1);
 
         private readonly SemaphoreSlim _processingLock = new(1, 1);
         private bool _enabled = true;
@@ -30,6 +31,8 @@ namespace WinBGMuter.Controller
         private bool _autoPlayAppPausedByUs = false;
 
         private Func<IEnumerable<string>>? _getNeverPauseList;
+        private int _pauseCooldownMs = 500;
+        private DateTimeOffset _lastActionTime = DateTimeOffset.MinValue;
 
         public AppController(
             VolumeMixer volumeMixer,
@@ -37,12 +40,14 @@ namespace WinBGMuter.Controller
             IReadOnlyDictionary<string, string>? processNameToSessionHint = null,
             Func<IEnumerable<string>>? getNeverPauseList = null,
             bool autoPlaySpotify = false,
-            string autoPlayAppName = "Spotify")
+            string autoPlayAppName = "Spotify",
+            int pauseCooldownMs = 500)
         {
             _volumeMixer = volumeMixer;
             _getNeverPauseList = getNeverPauseList;
             _autoPlaySpotify = autoPlaySpotify;
             _autoPlayAppName = autoPlayAppName;
+            _pauseCooldownMs = pauseCooldownMs;
             _foregroundTracker = new WinEventForegroundTracker();
             _mediaController = new GsmtcMediaController();
             _sessionResolver = new SessionResolver(_mediaController, processNameToSessionHint);
@@ -80,6 +85,12 @@ namespace WinBGMuter.Controller
         {
             get => _autoPlayAppName;
             set => _autoPlayAppName = value;
+        }
+
+        public int PauseCooldownMs
+        {
+            get => _pauseCooldownMs;
+            set => _pauseCooldownMs = Math.Max(0, value);
         }
 
         public void Start()
@@ -136,6 +147,8 @@ namespace WinBGMuter.Controller
 
             try
             {
+                await EnsureCooldownAsync().ConfigureAwait(false);
+
                 var sessions = await _mediaController.ListSessionsAsync().ConfigureAwait(false);
 
                 var targetSession = sessions.FirstOrDefault(s => IsTargetAppSession(s));
@@ -221,6 +234,8 @@ namespace WinBGMuter.Controller
 
         private async Task ProcessForegroundChangeAsync(ForegroundChangedEventArgs e)
         {
+            await EnsureCooldownAsync().ConfigureAwait(false);
+
             var foregroundPid = e.CurrentPid;
             string foregroundProcessName = "<unknown>";
 
@@ -304,6 +319,27 @@ namespace WinBGMuter.Controller
 
             // 5) Cleanup exited processes
             _stateStore.CleanupExitedProcesses();
+        }
+
+        private async Task EnsureCooldownAsync()
+        {
+            await _cooldownLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var now = DateTimeOffset.UtcNow;
+                var elapsed = now - _lastActionTime;
+                if (elapsed.TotalMilliseconds < _pauseCooldownMs)
+                {
+                    var remainingDelay = _pauseCooldownMs - (int)elapsed.TotalMilliseconds;
+                    await Task.Delay(remainingDelay).ConfigureAwait(false);
+                }
+
+                _lastActionTime = DateTimeOffset.UtcNow;
+            }
+            finally
+            {
+                _cooldownLock.Release();
+            }
         }
 
         private bool IsTargetAppSession(MediaSessionInfo session)

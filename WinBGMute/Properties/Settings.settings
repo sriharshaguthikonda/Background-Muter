@@ -29,5 +29,8 @@
     <Setting Name="AutoPlayAppName" Type="System.String" Scope="User">
       <Value Profile="(Default)">Spotify</Value>
     </Setting>
+    <Setting Name="PauseCooldownMs" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">500</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

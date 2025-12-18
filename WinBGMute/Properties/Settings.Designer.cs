@@ -130,5 +130,17 @@ namespace WinBGMuter.Properties {
                 this["AutoPlayAppName"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("500")]
+        public int PauseCooldownMs {
+            get {
+                return ((int)(this["PauseCooldownMs"]));
+            }
+            set {
+                this["PauseCooldownMs"] = value;
+            }
+        }
     }
 }
