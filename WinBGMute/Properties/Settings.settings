@@ -26,5 +26,8 @@
     <Setting Name="AutoPlaySpotify" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="AutoPlayAppName" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Spotify</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

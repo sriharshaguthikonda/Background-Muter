@@ -118,5 +118,17 @@ namespace WinBGMuter.Properties {
                 this["AutoPlaySpotify"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Spotify")]
+        public string AutoPlayAppName {
+            get {
+                return ((string)(this["AutoPlayAppName"]));
+            }
+            set {
+                this["AutoPlayAppName"] = value;
+            }
+        }
     }
 }

@@ -15,6 +15,7 @@ namespace WinBGMuter
 
         private CheckBox? _pauseOnUnfocusCheckbox;
         private CheckBox? _autoPlaySpotifyCheckbox;
+        private TextBox? _autoPlayAppTextBox;
         private GroupBox? _pauseSettingsGroupBox;
 
         private void InitializePauseOnUnfocus()
@@ -30,13 +31,15 @@ namespace WinBGMuter
             }
 
             var autoPlaySpotify = Properties.Settings.Default.AutoPlaySpotify;
+            var autoPlayAppName = Properties.Settings.Default.AutoPlayAppName;
 
             _appController = new AppController(
                 m_volumeMixer,
                 _pauseSettings.AudibilityThreshold,
                 null,
                 GetNeverPauseList,
-                autoPlaySpotify);
+                autoPlaySpotify,
+                autoPlayAppName);
 
             _appController.Enabled = _pauseSettings.Enabled;
 
@@ -65,7 +68,7 @@ namespace WinBGMuter
             {
                 Text = "🔊 Audio Control",
                 Dock = DockStyle.Bottom,
-                Height = 85,
+                Height = 110,
                 Padding = new Padding(3)
             };
 
@@ -90,10 +93,10 @@ namespace WinBGMuter
                 OnPauseOnUnfocusToggled(_pauseOnUnfocusCheckbox.Checked);
             };
 
-            // Auto-play Spotify checkbox
+            // Auto-play app checkbox
             _autoPlaySpotifyCheckbox = new CheckBox
             {
-                Text = "Auto-play Spotify when idle",
+                Text = "Auto-play app when idle:",
                 Checked = Properties.Settings.Default.AutoPlaySpotify,
                 AutoSize = true,
                 Margin = new Padding(3, 2, 3, 2)
@@ -103,8 +106,21 @@ namespace WinBGMuter
                 OnAutoPlaySpotifyToggled(_autoPlaySpotifyCheckbox.Checked);
             };
 
+            // App name text box
+            _autoPlayAppTextBox = new TextBox
+            {
+                Text = Properties.Settings.Default.AutoPlayAppName,
+                Width = 150,
+                Margin = new Padding(20, 2, 3, 2)
+            };
+            _autoPlayAppTextBox.TextChanged += (s, e) =>
+            {
+                OnAutoPlayAppNameChanged(_autoPlayAppTextBox.Text);
+            };
+
             innerPanel.Controls.Add(_pauseOnUnfocusCheckbox);
             innerPanel.Controls.Add(_autoPlaySpotifyCheckbox);
+            innerPanel.Controls.Add(_autoPlayAppTextBox);
 
             _pauseSettingsGroupBox.Controls.Add(innerPanel);
 
@@ -166,7 +182,20 @@ namespace WinBGMuter
                 _appController.AutoPlaySpotify = enabled;
             }
 
-            LoggingEngine.LogLine($"[AutoPlaySpotify] {(enabled ? "Enabled" : "Disabled")}",
+            LoggingEngine.LogLine($"[AutoPlay] {(enabled ? "Enabled" : "Disabled")} for {Properties.Settings.Default.AutoPlayAppName}",
+                category: LoggingEngine.LogCategory.General);
+        }
+
+        private void OnAutoPlayAppNameChanged(string appName)
+        {
+            Properties.Settings.Default.AutoPlayAppName = appName;
+
+            if (_appController != null)
+            {
+                _appController.AutoPlayAppName = appName;
+            }
+
+            LoggingEngine.LogLine($"[AutoPlay] App changed to: {appName}",
                 category: LoggingEngine.LogCategory.General);
         }
 
