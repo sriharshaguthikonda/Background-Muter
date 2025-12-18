@@ -12,7 +12,7 @@ namespace WinBGMuter.Config
         public bool Enabled { get; set; } = false;
         public PolicyMode Mode { get; set; } = PolicyMode.PauseOnly;
         public float AudibilityThreshold { get; set; } = 0.01f;
-        public int PauseCooldownMs { get; set; } = 500;
+        public int PauseCooldownMs { get; set; } = 2000;
 
         public void Load()
         {
@@ -46,11 +46,11 @@ namespace WinBGMuter.Config
 
             try
             {
-                PauseCooldownMs = Properties.Settings.Default[SettingKeyPauseCooldownMs] as int? ?? 500;
+                PauseCooldownMs = Properties.Settings.Default[SettingKeyPauseCooldownMs] as int? ?? 2000;
             }
             catch
             {
-                PauseCooldownMs = 500;
+                PauseCooldownMs = 2000;
             }
         }
 

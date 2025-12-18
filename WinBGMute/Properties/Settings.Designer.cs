@@ -133,7 +133,7 @@ namespace WinBGMuter.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("500")]
+        [global::System.Configuration.DefaultSettingValueAttribute("2000")]
         public int PauseCooldownMs {
             get {
                 return ((int)(this["PauseCooldownMs"]));

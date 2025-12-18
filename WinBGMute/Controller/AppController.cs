@@ -21,7 +21,6 @@ namespace WinBGMuter.Controller
         private readonly PauseAction _pauseAction;
         private readonly ActionPolicyEngine _policyEngine;
         private readonly PlaybackStateStore _stateStore;
-        private readonly SemaphoreSlim _cooldownLock = new(1, 1);
 
         private readonly SemaphoreSlim _processingLock = new(1, 1);
         private bool _enabled = true;
@@ -31,8 +30,8 @@ namespace WinBGMuter.Controller
         private bool _autoPlayAppPausedByUs = false;
 
         private Func<IEnumerable<string>>? _getNeverPauseList;
-        private int _pauseCooldownMs = 500;
-        private DateTimeOffset _lastActionTime = DateTimeOffset.MinValue;
+        private int _pauseCooldownMs = 2000;
+        private long _cooldownDeadlineMs = 0;
 
         public AppController(
             VolumeMixer volumeMixer,
@@ -41,7 +40,7 @@ namespace WinBGMuter.Controller
             Func<IEnumerable<string>>? getNeverPauseList = null,
             bool autoPlaySpotify = false,
             string autoPlayAppName = "Spotify",
-            int pauseCooldownMs = 500)
+            int pauseCooldownMs = 2000)
         {
             _volumeMixer = volumeMixer;
             _getNeverPauseList = getNeverPauseList;
@@ -323,22 +322,24 @@ namespace WinBGMuter.Controller
 
         private async Task EnsureCooldownAsync()
         {
-            await _cooldownLock.WaitAsync().ConfigureAwait(false);
-            try
+            // Sliding cooldown: each caller pushes the deadline out; waits until there has been
+            // a full cooldown window with no new activity.
+            var newDeadline = DateTimeOffset.UtcNow.AddMilliseconds(_pauseCooldownMs).ToUnixTimeMilliseconds();
+            Interlocked.Exchange(ref _cooldownDeadlineMs, newDeadline);
+
+            while (true)
             {
-                var now = DateTimeOffset.UtcNow;
-                var elapsed = now - _lastActionTime;
-                if (elapsed.TotalMilliseconds < _pauseCooldownMs)
+                var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var remaining = Interlocked.Read(ref _cooldownDeadlineMs) - nowMs;
+
+                if (remaining <= 0)
                 {
-                    var remainingDelay = _pauseCooldownMs - (int)elapsed.TotalMilliseconds;
-                    await Task.Delay(remainingDelay).ConfigureAwait(false);
+                    break;
                 }
 
-                _lastActionTime = DateTimeOffset.UtcNow;
-            }
-            finally
-            {
-                _cooldownLock.Release();
+                // Sleep the smaller of remaining or the cooldown to stay responsive to resets.
+                var delay = (int)Math.Min(remaining, _pauseCooldownMs);
+                await Task.Delay(delay).ConfigureAwait(false);
             }
         }
 
