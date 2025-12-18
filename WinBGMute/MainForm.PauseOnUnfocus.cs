@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using WinBGMuter.Abstractions;
@@ -18,6 +19,7 @@ namespace WinBGMuter
         private TextBox? _autoPlayAppTextBox;
         private NumericUpDown? _pauseCooldownNumeric;
         private GroupBox? _pauseSettingsGroupBox;
+        private Icon? _trayBaseIcon;
 
         private void InitializePauseOnUnfocus()
         {
@@ -50,8 +52,10 @@ namespace WinBGMuter
                 _appController.Start();
             }
 
+            _trayBaseIcon ??= TrayIcon?.Icon;
             SetupPauseOnUnfocusTrayMenu();
             SetupPauseOnUnfocusUIPanel();
+            UpdateTrayIconPauseState();
 
             LoggingEngine.LogLine($"[PauseOnUnfocus] Initialized (Enabled={_pauseSettings.Enabled}, Mode={_pauseSettings.Mode})",
                 category: LoggingEngine.LogCategory.General);
@@ -197,6 +201,7 @@ namespace WinBGMuter
             }
 
             _pauseSettings.Save();
+            UpdateTrayIconPauseState();
         }
 
         private void OnAutoPlaySpotifyToggled(bool enabled)
@@ -253,6 +258,23 @@ namespace WinBGMuter
         {
             // Reuse the same canonical never-mute set for pause
             return GetNeverMuteSet();
+        }
+
+        private void UpdateTrayIconPauseState()
+        {
+            if (TrayIcon == null)
+            {
+                return;
+            }
+
+            var isEnabled = _pauseSettings?.Enabled ?? false;
+            var stateLabel = isEnabled ? "Active" : "Disabled";
+            TrayIcon.Text = $"BGMuter (Pause: {stateLabel})";
+
+            if (_trayBaseIcon != null)
+            {
+                TrayIcon.Icon = isEnabled ? _trayBaseIcon : SystemIcons.Exclamation;
+            }
         }
     }
 }
