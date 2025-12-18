@@ -10,7 +10,7 @@ namespace WinBGMuter.Config
 {
     internal static class SettingsFileStore
     {
-        private const string SettingsFileName = "settings.json";
+        private const string SettingsFileName = "WinBGMuter_settings.json";
         private static string SettingsFilePath => Path.Combine(AppContext.BaseDirectory, SettingsFileName);
 
         public static void Load()

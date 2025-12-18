@@ -47,6 +47,13 @@ namespace WinBGMuter
 
             _appController.Enabled = _pauseSettings.Enabled;
 
+            // Ensure autoplay monitor starts even when Pause on Unfocus is disabled
+            // so Spotify can resume on startup when idle.
+            if (autoPlaySpotify)
+            {
+                _appController.AutoPlaySpotify = true;
+            }
+
             if (_pauseSettings.Enabled)
             {
                 _appController.Start();
