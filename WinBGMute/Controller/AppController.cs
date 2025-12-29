@@ -9,6 +9,7 @@ using WinBGMuter.Foreground;
 using WinBGMuter.Media;
 using WinBGMuter.Policy;
 using WinBGMuter.State;
+using static WinBGMuter.LoggingEngine;
 
 namespace WinBGMuter.Controller
 {
@@ -277,8 +278,20 @@ namespace WinBGMuter.Controller
                 LoggingEngine.LogLine($"[AppController] Resuming {foregroundProcessName} (was paused by us)",
                     category: LoggingEngine.LogCategory.Policy);
 
-                var sessionKey = new MediaSessionKey(pausedState.SessionKey, null);
-                var resumeResult = await _pauseAction.TryResumeAsync(sessionKey).ConfigureAwait(false);
+                PauseResult resumeResult;
+                if (string.Equals(pausedState.Method, "hwnd-appcommand", StringComparison.OrdinalIgnoreCase))
+                {
+                    var resumed = Win32MediaCommandController.TryResume(pausedState.SessionKey);
+                    resumeResult = resumed ? PauseResult.Success : PauseResult.Failed;
+                    LoggingEngine.LogLine($"[AppController] Resumed via WM_APPCOMMAND -> {(resumed ? "SUCCESS" : "FAILED")}",
+                        category: LoggingEngine.LogCategory.MediaControl,
+                        loglevel: resumed ? LOG_LEVEL_TYPE.LOG_INFO : LOG_LEVEL_TYPE.LOG_WARNING);
+                }
+                else
+                {
+                    var sessionKey = new MediaSessionKey(pausedState.SessionKey, null);
+                    resumeResult = await _pauseAction.TryResumeAsync(sessionKey).ConfigureAwait(false);
+                }
 
                 if (resumeResult == PauseResult.Success)
                 {
@@ -306,6 +319,21 @@ namespace WinBGMuter.Controller
                     LoggingEngine.LogLine($"[AppController] Skipping {processName} (in never-pause list)",
                         category: LoggingEngine.LogCategory.Policy);
                     continue;
+                }
+
+                // Edge multi-window: send WM_APPCOMMAND to the specific window handle instead of GSMTC session.
+                if (string.Equals(processName, "msedge", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Win32MediaCommandController.TryPause(pid, out var handleKey))
+                    {
+                        _stateStore.MarkPaused(pid, "hwnd-appcommand", handleKey);
+                        LoggingEngine.LogLine($"[AppController] Paused {processName} via WM_APPCOMMAND (handle {handleKey})",
+                            category: LoggingEngine.LogCategory.Policy);
+                        continue;
+                    }
+                    LoggingEngine.LogLine($"[AppController] WM_APPCOMMAND pause failed for {processName}",
+                        category: LoggingEngine.LogCategory.Policy,
+                        loglevel: LOG_LEVEL_TYPE.LOG_WARNING);
                 }
 
                 var pauseActionResult = await _pauseAction.TryPauseAsync(processName).ConfigureAwait(false);
