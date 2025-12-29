@@ -2,9 +2,12 @@
 
 - Shift focus: implement pause/resume (not mute) for background sessions.
 
+### Recently completed
+- [x] Show window titles alongside process names in Running Apps / Never Mute / AutoPlay lists for clarity.
+
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
-- [ ] Exceptions UI: allow adding/removing apps that should never be paused (e.g., music/voice apps).
+- [x] Exceptions UI: allow adding/removing apps that should never be paused (e.g., music/voice apps).
 - [ ] Onboarding note in-app: explain pause-on-unfocus behavior and how to whitelist apps.
 - [x] save settings to file and load it when app loads.
 - [x] settings option to close/minimize to tray.

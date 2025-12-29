@@ -111,7 +111,9 @@ namespace WinBGMuter
             var autoPlayAppName = Properties.Settings.Default.AutoPlayAppName;
             if (!string.IsNullOrWhiteSpace(autoPlayAppName))
             {
-                _autoPlayListBox.Items.Add(autoPlayAppName.Trim());
+                var trimmed = autoPlayAppName.Trim();
+                var title = TryGetWindowTitleByProcessName(trimmed);
+                _autoPlayListBox.Items.Add(new ProcessDisplayItem(trimmed, title));
             }
         }
 
@@ -123,7 +125,7 @@ namespace WinBGMuter
             }
 
             var appName = _autoPlayListBox.Items.Count > 0
-                ? _autoPlayListBox.Items[0]?.ToString() ?? string.Empty
+                ? ExtractProcessName(_autoPlayListBox.Items[0])
                 : string.Empty;
 
             Properties.Settings.Default.AutoPlayAppName = appName;
@@ -143,7 +145,8 @@ namespace WinBGMuter
                 return;
             }
 
-            var selectedApp = NeverMuteListBox.SelectedItem?.ToString();
+            var selectedItem = NeverMuteListBox.SelectedItem;
+            var selectedApp = ExtractProcessName(selectedItem);
             if (string.IsNullOrEmpty(selectedApp))
             {
                 return;
@@ -151,7 +154,7 @@ namespace WinBGMuter
 
             // Only one AutoPlay app allowed; replace existing
             _autoPlayListBox.Items.Clear();
-            _autoPlayListBox.Items.Add(selectedApp);
+            _autoPlayListBox.Items.Add(new ProcessDisplayItem(selectedApp, TryGetWindowTitleByProcessName(selectedApp)));
 
             // Remove from NeverMute list
             RemoveFromNeverMuteList(selectedApp);
@@ -167,7 +170,8 @@ namespace WinBGMuter
                 return;
             }
 
-            var selectedApp = _autoPlayListBox.SelectedItem?.ToString();
+            var selectedItem = _autoPlayListBox.SelectedItem;
+            var selectedApp = ExtractProcessName(selectedItem);
             if (string.IsNullOrEmpty(selectedApp))
             {
                 return;

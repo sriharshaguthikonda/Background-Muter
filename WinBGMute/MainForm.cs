@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Timers;
+using System.Linq;
 using WinBGMuter.Config;
 
 namespace WinBGMuter
@@ -79,6 +80,61 @@ namespace WinBGMuter
 
         // keep alive timer @todo replace the Forms timer with the System.Timer
         private static System.Timers.Timer m_keepAliveTimer = new System.Timers.Timer(600000);
+
+        private sealed class ProcessDisplayItem
+        {
+            public ProcessDisplayItem(string processName, string? windowTitle)
+            {
+                ProcessName = processName;
+                WindowTitle = windowTitle;
+            }
+
+            public string ProcessName { get; }
+            public string? WindowTitle { get; }
+
+            public override string ToString()
+            {
+                return string.IsNullOrWhiteSpace(WindowTitle)
+                    ? ProcessName
+                    : $"{ProcessName} – {WindowTitle}";
+            }
+        }
+
+        private static string ExtractProcessName(object? item)
+        {
+            return item switch
+            {
+                ProcessDisplayItem p => p.ProcessName,
+                string s => s.Split('–')[0].Trim(),
+                _ => item?.ToString() ?? string.Empty
+            };
+        }
+
+        private static string? TryGetWindowTitle(Process proc)
+        {
+            try
+            {
+                var title = proc.MainWindowTitle;
+                return string.IsNullOrWhiteSpace(title) ? null : title;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string? TryGetWindowTitleByProcessName(string processName)
+        {
+            try
+            {
+                var proc = Process.GetProcessesByName(processName).FirstOrDefault();
+                return proc != null ? TryGetWindowTitle(proc) : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
 
         private void InternalLog(object olog, object? ocolor = null, object? ofont = null)
         {
@@ -162,7 +218,7 @@ namespace WinBGMuter
                     string pname = proc.ProcessName;
 
                     // Exclusive: skip if in NeverMute or AutoPlay
-                    if (NeverMuteListBox.Items.Contains(pname))
+                    if (NeverMuteListBox.Items.Cast<object?>().Any(i => string.Equals(ExtractProcessName(i), pname, StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
                     }
@@ -171,7 +227,8 @@ namespace WinBGMuter
                         continue;
                     }
 
-                    ProcessListListBox.Items.Add(pname);
+                    var title = TryGetWindowTitle(proc);
+                    ProcessListListBox.Items.Add(new ProcessDisplayItem(pname, title));
                 }
                 catch (Exception ex)
                 {
@@ -426,7 +483,14 @@ namespace WinBGMuter
 
             foreach (string neverMuteEntry in neverMuteList)
             {
-                NeverMuteListBox.Items.Add(neverMuteEntry.Trim());
+                var name = neverMuteEntry.Trim();
+                if (string.IsNullOrEmpty(name))
+                {
+                    continue;
+                }
+
+                var title = TryGetWindowTitleByProcessName(name);
+                NeverMuteListBox.Items.Add(new ProcessDisplayItem(name, title));
             }
         }
 
@@ -616,7 +680,8 @@ private void ConsoleLogging_CheckedChanged(object sender, EventArgs e)
         {
             try
             {
-                var selectedApp = ProcessListListBox.Items[ProcessListListBox.SelectedIndex]?.ToString();
+                var selectedItem = ProcessListListBox.Items[ProcessListListBox.SelectedIndex];
+                var selectedApp = ExtractProcessName(selectedItem);
                 if (string.IsNullOrEmpty(selectedApp))
                 {
                     return;
@@ -663,7 +728,11 @@ private void ConsoleLogging_CheckedChanged(object sender, EventArgs e)
                 var newText = String.Empty;
                 foreach (var item in NeverMuteListBox.Items)
                 {
-                    newText += item.ToString() + ",";
+                    var name = ExtractProcessName(item);
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        newText += name + ",";
+                    }
                 }
 
                 NeverMuteTextBox.Text = newText;
