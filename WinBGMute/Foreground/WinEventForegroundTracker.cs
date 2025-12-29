@@ -38,10 +38,17 @@ namespace WinBGMuter.Foreground
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern int GetWindowTextLength(IntPtr hWnd);
+
         private readonly System.Timers.Timer _debounceTimer;
         private readonly object _sync = new();
         private int _lastPid = -1;
         private int _pendingPid = -1;
+        private IntPtr _pendingHwnd = IntPtr.Zero;
         private IntPtr _hook = IntPtr.Zero;
         private WinEventProcDelegate? _callback;
 
@@ -101,6 +108,7 @@ namespace WinBGMuter.Foreground
             lock (_sync)
             {
                 _pendingPid = (int)pid;
+                _pendingHwnd = hwnd;
                 _debounceTimer.Stop();
                 _debounceTimer.Start();
             }
@@ -109,10 +117,13 @@ namespace WinBGMuter.Foreground
         private void DebounceElapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             int pid;
+            IntPtr hwnd;
             lock (_sync)
             {
                 pid = _pendingPid;
+                hwnd = _pendingHwnd;
                 _pendingPid = -1;
+                _pendingHwnd = IntPtr.Zero;
             }
 
             if (pid == -1 || pid == _lastPid)
@@ -122,13 +133,38 @@ namespace WinBGMuter.Foreground
 
             var previous = _lastPid;
             _lastPid = pid;
-            ForegroundChanged?.Invoke(this, new ForegroundChangedEventArgs(previous, pid, IntPtr.Zero, DateTimeOffset.UtcNow));
+            var title = GetWindowTitleSafe(hwnd);
+            ForegroundChanged?.Invoke(this, new ForegroundChangedEventArgs(previous, pid, hwnd, DateTimeOffset.UtcNow, title));
         }
 
         public void Dispose()
         {
             Stop();
             _debounceTimer.Dispose();
+        }
+
+        private static string? GetWindowTitleSafe(IntPtr hwnd)
+        {
+            try
+            {
+                var length = GetWindowTextLength(hwnd);
+                if (length <= 0)
+                {
+                    return null;
+                }
+
+                var sb = new System.Text.StringBuilder(length + 1);
+                if (GetWindowText(hwnd, sb, sb.Capacity) > 0)
+                {
+                    return sb.ToString();
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            return null;
         }
     }
 }

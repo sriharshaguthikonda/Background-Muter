@@ -243,6 +243,7 @@ namespace WinBGMuter.Controller
             await WaitForCooldownAsync().ConfigureAwait(false);
 
             var foregroundPid = e.CurrentPid;
+            var foregroundTitle = string.IsNullOrWhiteSpace(e.WindowTitle) ? "<no title>" : e.WindowTitle.Trim();
             string foregroundProcessName = "<unknown>";
 
             try
@@ -254,7 +255,7 @@ namespace WinBGMuter.Controller
                 // Process may have exited
             }
 
-            LoggingEngine.LogLine($"[AppController] Foreground changed to {foregroundProcessName} (PID {foregroundPid})",
+            LoggingEngine.LogLine($"[AppController] Foreground changed to {foregroundProcessName} (PID {foregroundPid}) Title=\"{foregroundTitle}\"",
                 category: LoggingEngine.LogCategory.Foreground);
 
             // 1) Get audio PIDs from VolumeMixer (already works for existing mute logic)
