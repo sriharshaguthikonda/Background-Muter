@@ -31,7 +31,7 @@ let lastActiveTabId = null;
 let lastActiveWindowId = null;
 let pendingFocusLossTimer = null;
 
-const FOCUS_LOSS_DEBOUNCE_MS = 300;
+const FOCUS_LOSS_DEBOUNCE_MS = 800;
 
 function isWindowPlaying(windowId) {
     for (const state of tabMediaState.values()) {
@@ -48,8 +48,20 @@ function scheduleFocusLossPause() {
         pendingFocusLossTimer = null;
     }
 
-    pendingFocusLossTimer = setTimeout(() => {
+    pendingFocusLossTimer = setTimeout(async () => {
         pendingFocusLossTimer = null;
+
+        try {
+            const windows = await chrome.windows.getAll({ populate: false });
+            const hasFocused = windows.some(w => w.focused);
+            if (hasFocused) {
+                log("BROWSER LOST FOCUS canceled (another Edge window is focused)");
+                return;
+            }
+        } catch (e) {
+            log("BROWSER LOST FOCUS check failed:", e.message);
+        }
+
         log("BROWSER LOST FOCUS (confirmed)");
         if (settings.pauseOnWindowSwitch) {
             pauseAllTabs().catch(() => {});
@@ -449,20 +461,20 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
             const isWindowSwitch = lastActiveWindowId !== windowId;
             const isTabSwitch = lastActiveTabId !== tab.id;
             log("  isWindowSwitch:", isWindowSwitch, "isTabSwitch:", isTabSwitch);
-            let targetWindowHasPlaying = isWindowPlaying(windowId);
-            if (!targetWindowHasPlaying && !tabMediaState.has(tab.id)) {
-                const state = await tryGetTabState(tab.id);
-                if (state && typeof state.playing === "boolean") {
-                    targetWindowHasPlaying = state.playing;
-                    tabMediaState.set(tab.id, {
-                        playing: state.playing,
-                        title: tab.title || "",
-                        url: tab.url || "",
-                        windowId: windowId,
-                        pausedByExtension: false
-                    });
-                }
+
+            const activeState = await tryGetTabState(tab.id);
+            if (activeState && typeof activeState.playing === "boolean") {
+                const existing = tabMediaState.get(tab.id);
+                tabMediaState.set(tab.id, {
+                    playing: activeState.playing,
+                    title: tab.title || existing?.title || "",
+                    url: tab.url || existing?.url || "",
+                    windowId: windowId,
+                    pausedByExtension: existing?.pausedByExtension || false
+                });
             }
+
+            const targetWindowHasPlaying = isWindowPlaying(windowId);
             log("  Target window has playing media:", targetWindowHasPlaying);
             
             // PAUSE previous window's tab if setting enabled and we switched windows
