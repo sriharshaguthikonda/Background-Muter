@@ -206,10 +206,14 @@ namespace WinBGMuter.Browser
         private void HandleTabClosed(JsonElement root)
         {
             var tabId = root.GetProperty("tabId").GetInt32();
-            _tabs.TryRemove(tabId, out _);
+            _tabs.TryRemove(tabId, out var removed);
 
             LoggingEngine.LogLine($"[NativeMessaging] Tab closed: {tabId}",
                 category: LoggingEngine.LogCategory.MediaControl);
+
+            var title = removed?.Title ?? string.Empty;
+            var url = removed?.Url ?? string.Empty;
+            TabStateChanged?.Invoke(this, new TabStateChangedEventArgs(tabId, false, title, url));
         }
 
         private void HandleTabStates(JsonElement root)
@@ -219,6 +223,7 @@ namespace WinBGMuter.Browser
                 return;
             }
 
+            _tabs.Clear();
             foreach (var tab in tabsArray.EnumerateArray())
             {
                 var tabId = tab.GetProperty("tabId").GetInt32();
@@ -231,6 +236,11 @@ namespace WinBGMuter.Browser
 
             LoggingEngine.LogLine($"[NativeMessaging] Received {_tabs.Count} tab states",
                 category: LoggingEngine.LogCategory.MediaControl);
+
+            foreach (var tab in _tabs.Values)
+            {
+                TabStateChanged?.Invoke(this, new TabStateChangedEventArgs(tab.TabId, tab.IsPlaying, tab.Title, tab.Url));
+            }
         }
 
         /// <summary>

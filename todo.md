@@ -9,6 +9,7 @@
 - [x] Backoff native host reconnects when the main app is not running.
 - [x] Refresh main UI layout (spacing, sizing, readability).
 - [x] Prevent cross-window tab switches from pausing when the target window is silent.
+- [x] AutoPlay respects browser playback state so it won't resume while Edge is playing.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.

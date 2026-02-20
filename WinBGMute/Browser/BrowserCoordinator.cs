@@ -18,10 +18,12 @@ namespace WinBGMuter.Browser
         private const string PipeName = "BackgroundMuter_BrowserCoordinator";
         private readonly CancellationTokenSource _cts = new();
         private readonly ConcurrentDictionary<string, ConnectedExtension> _extensions = new();
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, bool>> _extensionTabStates = new();
         private Task? _serverTask;
         private bool _disposed;
 
         public event EventHandler<BrowserFocusChangedEventArgs>? BrowserFocusChanged;
+        public bool IsAnyTabPlaying => HasAnyPlayingTab();
 
         /// <summary>
         /// Start the named pipe server to accept extension connections.
@@ -58,6 +60,7 @@ namespace WinBGMuter.Browser
                     var extensionId = Guid.NewGuid().ToString();
                     var extension = new ConnectedExtension(extensionId, pipe, this);
                     _extensions.TryAdd(extensionId, extension);
+                    _extensionTabStates.TryAdd(extensionId, new ConcurrentDictionary<int, bool>());
                     
                     LoggingEngine.LogLine($"[BrowserCoordinator] Extension connected: {extensionId}",
                         category: LoggingEngine.LogCategory.MediaControl);
@@ -139,6 +142,7 @@ namespace WinBGMuter.Browser
         internal void OnExtensionDisconnected(string extensionId)
         {
             _extensions.TryRemove(extensionId, out _);
+            _extensionTabStates.TryRemove(extensionId, out _);
             LoggingEngine.LogLine($"[BrowserCoordinator] Extension disconnected: {extensionId}",
                 category: LoggingEngine.LogCategory.MediaControl);
         }
@@ -158,6 +162,42 @@ namespace WinBGMuter.Browser
                     {
                         LoggingEngine.LogLine($"[BrowserCoordinator] Extension {extensionId} lost focus",
                             category: LoggingEngine.LogCategory.MediaControl);
+                    }
+                    else if (type == "mediaStateChanged")
+                    {
+                        if (TryGetInt(root, out var tabId, "tabId", "TabId") &&
+                            TryGetBool(root, out var playing, "playing", "IsPlaying"))
+                        {
+                            UpdateExtensionTabState(extensionId, tabId, playing);
+                        }
+                    }
+                    else if (type == "tabStates")
+                    {
+                        if (root.TryGetProperty("tabs", out var tabsElement) &&
+                            tabsElement.ValueKind == JsonValueKind.Array)
+                        {
+                            var updated = new ConcurrentDictionary<int, bool>();
+                            foreach (var tab in tabsElement.EnumerateArray())
+                            {
+                                if (TryGetInt(tab, out var tabId, "tabId", "TabId") &&
+                                    TryGetBool(tab, out var playing, "playing", "IsPlaying"))
+                                {
+                                    updated[tabId] = playing;
+                                }
+                            }
+
+                            _extensionTabStates.AddOrUpdate(extensionId, updated, (_, __) => updated);
+                        }
+                    }
+                    else if (type == "tabClosed")
+                    {
+                        if (TryGetInt(root, out var tabId, "tabId", "TabId"))
+                        {
+                            if (_extensionTabStates.TryGetValue(extensionId, out var tabs))
+                            {
+                                tabs.TryRemove(tabId, out _);
+                            }
+                        }
                     }
                     else if (type == "windowFocused")
                     {
@@ -192,6 +232,58 @@ namespace WinBGMuter.Browser
                     catch { }
                 }
             }
+        }
+
+        private void UpdateExtensionTabState(string extensionId, int tabId, bool isPlaying)
+        {
+            var tabs = _extensionTabStates.GetOrAdd(extensionId, _ => new ConcurrentDictionary<int, bool>());
+            tabs[tabId] = isPlaying;
+        }
+
+        private bool HasAnyPlayingTab()
+        {
+            foreach (var extension in _extensionTabStates.Values)
+            {
+                foreach (var isPlaying in extension.Values)
+                {
+                    if (isPlaying)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryGetInt(JsonElement element, out int value, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (element.TryGetProperty(name, out var el) && el.TryGetInt32(out value))
+                {
+                    return true;
+                }
+            }
+
+            value = 0;
+            return false;
+        }
+
+        private static bool TryGetBool(JsonElement element, out bool value, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                if (element.TryGetProperty(name, out var el) &&
+                    (el.ValueKind == JsonValueKind.True || el.ValueKind == JsonValueKind.False))
+                {
+                    value = el.GetBoolean();
+                    return true;
+                }
+            }
+
+            value = false;
+            return false;
         }
 
         public void Dispose()

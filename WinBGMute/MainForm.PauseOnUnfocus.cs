@@ -51,7 +51,8 @@ namespace WinBGMuter
                 GetNeverPauseList,
                 autoPlaySpotify,
                 autoPlayAppName,
-                _pauseSettings.PauseCooldownMs);
+                _pauseSettings.PauseCooldownMs,
+                () => _browserCoordinator?.IsAnyTabPlaying ?? false);
 
             _appController.Enabled = _pauseSettings.Enabled;
 

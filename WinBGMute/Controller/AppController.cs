@@ -21,6 +21,7 @@ namespace WinBGMuter.Controller
         private readonly PauseAction _pauseAction;
         private readonly ActionPolicyEngine _policyEngine;
         private readonly PlaybackStateStore _stateStore;
+        private readonly Func<bool>? _isExternalMediaPlaying;
 
         private readonly SemaphoreSlim _processingLock = new(1, 1);
         private bool _enabled = true;
@@ -45,13 +46,15 @@ namespace WinBGMuter.Controller
             Func<IEnumerable<string>>? getNeverPauseList = null,
             bool autoPlaySpotify = false,
             string autoPlayAppName = "Spotify",
-            int pauseCooldownMs = 7000)
+            int pauseCooldownMs = 7000,
+            Func<bool>? isExternalMediaPlaying = null)
         {
             _volumeMixer = volumeMixer;
             _getNeverPauseList = getNeverPauseList;
             _autoPlaySpotify = autoPlaySpotify;
             _autoPlayAppName = autoPlayAppName;
             _pauseCooldownMs = pauseCooldownMs;
+            _isExternalMediaPlaying = isExternalMediaPlaying;
             _foregroundTracker = new WinEventForegroundTracker();
             _mediaController = new GsmtcMediaController();
             _sessionResolver = new SessionResolver(_mediaController, processNameToSessionHint);
@@ -163,6 +166,11 @@ namespace WinBGMuter.Controller
                 var otherPlaying = sessions.Any(s =>
                     s.PlaybackState == MediaPlaybackState.Playing &&
                     !IsTargetAppSession(s));
+                var externalPlaying = _isExternalMediaPlaying?.Invoke() ?? false;
+                if (externalPlaying)
+                {
+                    otherPlaying = true;
+                }
 
                 if (otherPlaying)
                 {
