@@ -5,6 +5,7 @@
 ### Recently completed
 - [x] Show window titles alongside process names in Running Apps / Never Mute / AutoPlay lists for clarity.
 - [x] Pause previous window only when the newly focused window has playing media.
+- [x] Fix native messaging host framing to avoid partial reads and stdin contention.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.

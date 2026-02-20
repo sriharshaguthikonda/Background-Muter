@@ -14,6 +14,7 @@ namespace WinBGMuter.Browser
     /// </summary>
     internal sealed class NativeMessagingHost : IDisposable
     {
+        private const int MaxMessageSize = 1024 * 1024; // 1MB max
         private readonly CancellationTokenSource _cts = new();
         private readonly ConcurrentDictionary<int, TabInfo> _tabs = new();
         private Task? _readTask;
@@ -39,6 +40,11 @@ namespace WinBGMuter.Browser
             _readTask?.Wait(1000);
         }
 
+        public void WaitForExit()
+        {
+            _readTask?.Wait();
+        }
+
         private async Task ReadMessagesAsync()
         {
             using var stdin = Console.OpenStandardInput();
@@ -49,25 +55,37 @@ namespace WinBGMuter.Browser
                 try
                 {
                     // Read message length (4 bytes, little-endian)
-                    var bytesRead = await stdin.ReadAsync(buffer, 0, 4, _cts.Token);
-                    if (bytesRead < 4)
+                    var bytesRead = await ReadExactlyAsync(stdin, buffer, 0, buffer.Length, _cts.Token).ConfigureAwait(false);
+                    if (bytesRead == 0)
                     {
-                        await Task.Delay(100, _cts.Token);
-                        continue;
+                        break; // EOF
+                    }
+                    if (bytesRead < buffer.Length)
+                    {
+                        LoggingEngine.LogLine("[NativeMessaging] Incomplete message length received, closing host",
+                            category: LoggingEngine.LogCategory.MediaControl,
+                            loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+                        break;
                     }
 
                     int messageLength = BitConverter.ToInt32(buffer, 0);
-                    if (messageLength <= 0 || messageLength > 1024 * 1024) // 1MB max
+                    if (messageLength <= 0 || messageLength > MaxMessageSize)
                     {
-                        continue;
+                        LoggingEngine.LogLine($"[NativeMessaging] Invalid message length {messageLength}, closing host",
+                            category: LoggingEngine.LogCategory.MediaControl,
+                            loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+                        break;
                     }
 
                     // Read message content
                     var messageBuffer = new byte[messageLength];
-                    bytesRead = await stdin.ReadAsync(messageBuffer, 0, messageLength, _cts.Token);
+                    bytesRead = await ReadExactlyAsync(stdin, messageBuffer, 0, messageLength, _cts.Token).ConfigureAwait(false);
                     if (bytesRead < messageLength)
                     {
-                        continue;
+                        LoggingEngine.LogLine("[NativeMessaging] Incomplete message payload received, closing host",
+                            category: LoggingEngine.LogCategory.MediaControl,
+                            loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+                        break;
                     }
 
                     var json = Encoding.UTF8.GetString(messageBuffer);
@@ -84,6 +102,22 @@ namespace WinBGMuter.Browser
                         loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
                 }
             }
+        }
+
+        private static async Task<int> ReadExactlyAsync(Stream stream, byte[] buffer, int offset, int count, CancellationToken ct)
+        {
+            int totalRead = 0;
+            while (totalRead < count)
+            {
+                int read = await stream.ReadAsync(buffer.AsMemory(offset + totalRead, count - totalRead), ct).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    return totalRead;
+                }
+                totalRead += read;
+            }
+
+            return totalRead;
         }
 
         private void ProcessMessage(string json)
