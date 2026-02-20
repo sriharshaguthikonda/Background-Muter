@@ -21,13 +21,16 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Timers;
+
+using Timer = System.Timers.Timer;
 
 
 
 
 namespace WinBGMuter
 {
-    internal class ForegroundProcessManager
+    internal sealed class ForegroundProcessManager : IDisposable
     {
         //WinAPI to translate PID from hWND
         [DllImport("User32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -61,107 +64,40 @@ namespace WinBGMuter
         private const Int32 OBJID_WINDOW = 0x00000000;
         private const Int32 CHILDID_SELF = 0;
 
-        private IntPtr m_hWinEventHook;
-        private WinEventProcDelegate m_winEventProc;
-        private static ConcurrentStack<int> m_JobStack = new ConcurrentStack<int>();
+        private IntPtr m_hWinEventHook = IntPtr.Zero;
+        private WinEventProcDelegate m_winEventProc = null!;
+        private static readonly ConcurrentStack<int> m_JobStack = new ConcurrentStack<int>();
+        private readonly Timer m_debounceTimer;
+        private readonly object m_debounceLock = new object();
 
         private int m_lastForegroundId = -1;
+        private int m_pendingForegroundId = -1;
+
+        public ForegroundProcessManager(int debounceIntervalMs = 200)
+        {
+            m_debounceTimer = new Timer(debounceIntervalMs)
+            {
+                AutoReset = false
+            };
+
+            m_debounceTimer.Elapsed += DebounceTimerElapsed;
+        }
 
         public (bool, int) GetJobThreadSafe()
         {
-            int pid;
-            bool success;
-
-            /*
-             * piece of code to output the contents of the stack
-             * 
-                string output = "";
-                foreach (int i_pid in m_JobStack)
-                {
-                    output += $"{i_pid} - ";
-
-                }
-                if (!m_JobStack.IsEmpty)
-                        LoggingEngine.LogLine("" + output);
-            */
-
-            if (m_JobStack.TryPop(out pid))
+            if (m_JobStack.TryPop(out var pid))
             {
-
                 if (!m_JobStack.IsEmpty)
                 {
-                    LoggingEngine.LogLine("[*] discrading previous foreground processes ");
+                    LoggingEngine.LogLine("[*] discarding previous foreground processes ");
                 }
+
                 m_JobStack.Clear();
 
-                
-                success = true;
-            }
-            else
-            {
-                pid = -1;
-                success = false;
-            }
-            /* EXPERIEMTNAL
-             * This will evaluate if (in rare cases) the current foreground PID from the event handler (WinEventProc) is equal to the PID provided by 
-             * a new polling function (PollForegroundProcessId). 
-             * 
-             TODO: in the future, remove the whole WinEventProc (and the related stack) and replace them with the following piece of code which does the same job more reliably */
-            int poll_fpid = PollForegroundProcessId();
-
-            /* there was a change in the foreground process */
-            if (m_lastForegroundId != poll_fpid)
-            {
-                success = true;
-                m_lastForegroundId = poll_fpid;
-            }
-            /* no change */
-            else
-            {
-                success = false;
-                return (success, poll_fpid);
-
+                return (true, pid);
             }
 
-
-            string poll_fname = "";
-            string fname = "";
-            if (poll_fpid != pid)
-            {
-                try
-                {
-                    poll_fname = Process.GetProcessById(poll_fpid).ProcessName;
-
-                }
-                catch (Exception e)
-                {
-                    poll_fname = "<unknown>";
-                }
-
-                try
-                {
-                    fname = Process.GetProcessById(pid).ProcessName;
-
-                }
-                catch (Exception e)
-                {
-                    fname = "<unknown>";
-                }
-
-                if (pid != -1)
-                    LoggingEngine.LogLine($"[!] Assertion failed for {fname}({pid}) <> (polled){poll_fname}({poll_fpid}) ", Color.Yellow);
-
-                //overwriting pid!
-                pid = poll_fpid;
-
-               
-
-
-            }
-
-
-            return (success, pid);
-
+            return (false, -1);
         }
 
         public void Init()
@@ -176,22 +112,16 @@ namespace WinBGMuter
 
         public void CleanUp()
         {
+            m_debounceTimer.Elapsed -= DebounceTimerElapsed;
+            m_debounceTimer.Stop();
+            m_debounceTimer.Dispose();
             UnhookWinEvent(m_hWinEventHook);
 
         }
 
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetForegroundWindow();
-
-        public int PollForegroundProcessId()
+        public void Dispose()
         {
-
-            uint processID = 0;
-            IntPtr hWnd = GetForegroundWindow(); // Get foreground window handle
-            uint threadID = GetWindowThreadProcessId(hWnd, out processID); // Get PID from window handle
-            //Process fgProc = Process.GetProcessById(Convert.ToInt32(processID)); // Get it as a C# obj.
-            // NOTE: In some rare cases ProcessID will be NULL. Handle this how you want. 
-            return Convert.ToInt32(processID);
+            CleanUp();
         }
 
         private void WinEventProc(
@@ -206,9 +136,11 @@ namespace WinBGMuter
           )
         {
             uint testpid = 0;
-            GetWindowThreadProcessId(hwnd, out testpid);
-
-            int ftestpidpid = (int)testpid;
+            var threadId = GetWindowThreadProcessId(hwnd, out testpid);
+            if (threadId == 0)
+            {
+                return;
+            }
 
             if (ev == EVENT_SYSTEM_FOREGROUND &&
                 idObject == OBJID_WINDOW &&
@@ -222,7 +154,7 @@ namespace WinBGMuter
                 try
                 {
                     foreground = Process.GetProcessById(fpid);
-                
+
 
                     string pname = String.Empty;
 
@@ -231,11 +163,9 @@ namespace WinBGMuter
                         pname = foreground.ProcessName;
                     }
 
-                    LoggingEngine.LogLine($"[+] Foreground process changed to {pname} - {fpid}", Color.Cyan);
-
                     if ((fpid != 0) && (pname != String.Empty))
                     {
-                        m_JobStack.Push(fpid);
+                        DebounceForegroundChange(fpid);
                     }
 
                 }
@@ -245,11 +175,54 @@ namespace WinBGMuter
                 }
                 finally
                 {
-                
+
                 }
 
 
             }
+        }
+
+        private void DebounceForegroundChange(int pid)
+        {
+            lock (m_debounceLock)
+            {
+                m_pendingForegroundId = pid;
+                m_debounceTimer.Stop();
+                m_debounceTimer.Start();
+            }
+        }
+
+        private void DebounceTimerElapsed(object? sender, ElapsedEventArgs e)
+        {
+            int pid;
+
+            lock (m_debounceLock)
+            {
+                pid = m_pendingForegroundId;
+                m_pendingForegroundId = -1;
+            }
+
+            if (pid == -1 || pid == m_lastForegroundId)
+            {
+                return;
+            }
+
+            string pname = String.Empty;
+
+            try
+            {
+                var proc = Process.GetProcessById(pid);
+                pname = proc.ProcessName;
+            }
+            catch (Exception)
+            {
+                pname = "<unknown>";
+            }
+
+            m_lastForegroundId = pid;
+
+            LoggingEngine.LogLine($"[+] Foreground process changed to {pname} - {pid}", Color.Cyan);
+            m_JobStack.Push(pid);
         }
     }
 }

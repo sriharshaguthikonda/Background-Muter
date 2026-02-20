@@ -1,0 +1,479 @@
+// Background Muter - Tab Control Extension
+// Background Service Worker
+
+const NATIVE_HOST_NAME = "com.backgroundmuter.tabcontrol";
+const DEBUG = true;
+
+function log(...args) {
+    if (DEBUG) console.log("[BGMuter]", new Date().toLocaleTimeString(), ...args);
+}
+
+function logState() {
+    log("=== STATE ===");
+    log("  lastActiveTabId:", lastActiveTabId);
+    log("  lastActiveWindowId:", lastActiveWindowId);
+    log("  tabMediaState size:", tabMediaState.size);
+    tabMediaState.forEach((state, tabId) => {
+        log(`    Tab ${tabId}: playing=${state.playing}, title="${state.title}"`);
+    });
+    log("=============");
+}
+
+// Track tabs with active media
+const tabMediaState = new Map(); // tabId -> { playing: bool, title: string, url: string, pausedByExtension: bool }
+
+// Track the last active tab that was playing
+let lastPlayingTabId = null;
+let lastActiveTabId = null;
+let lastActiveWindowId = null;
+
+// Settings (loaded from storage)
+let settings = {
+    pauseOnTabSwitch: true,
+    pauseOnWindowSwitch: true,
+    autoPlayOnWindowFocus: true
+};
+
+// Load settings from storage
+async function loadSettings() {
+    try {
+        const result = await chrome.storage.sync.get(settings);
+        settings = { ...settings, ...result };
+        log("Settings loaded:", settings);
+    } catch (e) {
+        log("!!! Error loading settings:", e.message);
+    }
+}
+
+// Native messaging port
+let nativePort = null;
+let nativeHostEnabled = true; // Set to false to run standalone without native app
+
+// Connect to native messaging host
+function connectNativeHost() {
+    if (!nativeHostEnabled) {
+        console.log("[BGMuter] Native messaging disabled, running standalone");
+        return;
+    }
+    
+    try {
+        nativePort = chrome.runtime.connectNative(NATIVE_HOST_NAME);
+        
+        nativePort.onMessage.addListener((message) => {
+            console.log("[BGMuter] Received from native:", message);
+            handleNativeMessage(message);
+        });
+        
+        nativePort.onDisconnect.addListener(() => {
+            const error = chrome.runtime.lastError?.message || "Unknown error";
+            console.log("[BGMuter] Native host disconnected:", error);
+            nativePort = null;
+            
+            // Don't retry if host not found - run standalone instead
+            if (error.includes("not found") || error.includes("Specified native messaging host not found")) {
+                console.log("[BGMuter] Native host not installed, running in standalone mode");
+                nativeHostEnabled = false;
+            } else {
+                // Try to reconnect after a delay for other errors
+                setTimeout(connectNativeHost, 5000);
+            }
+        });
+        
+        console.log("[BGMuter] Connected to native host");
+        
+        // Send initial state
+        sendTabStates();
+    } catch (e) {
+        console.error("[BGMuter] Failed to connect to native host:", e);
+        nativeHostEnabled = false;
+    }
+}
+
+// Handle messages from native app (coordinator)
+function handleNativeMessage(message) {
+    log("<<< Received from native app:", message);
+    
+    switch (message.action) {
+        case "pauseTab":
+            pauseTab(message.tabId);
+            break;
+        case "playTab":
+            playTab(message.tabId);
+            break;
+        case "pauseAllExcept":
+            pauseAllTabsExcept(message.tabId);
+            break;
+        case "pauseAll":
+            // Coordinator telling us to pause all media in this profile
+            log(">>> COORDINATOR: Pause all tabs in this profile");
+            pauseAllTabs();
+            break;
+        case "playFocused":
+            // Coordinator telling us to play the focused tab
+            log(">>> COORDINATOR: Play focused tab");
+            if (lastActiveTabId) {
+                const state = tabMediaState.get(lastActiveTabId);
+                if (state && state.pausedByExtension) {
+                    playTab(lastActiveTabId);
+                }
+            }
+            break;
+        case "getTabStates":
+            sendTabStates();
+            break;
+        default:
+            log("Unknown action from native:", message.action);
+    }
+}
+
+// Pause all tabs in this profile
+async function pauseAllTabs() {
+    for (const [tabId, state] of tabMediaState) {
+        if (state.playing) {
+            log(">>> Pausing tab:", tabId, state.title);
+            await pauseTab(tabId);
+        }
+    }
+}
+
+// Send current tab states to native app
+function sendTabStates() {
+    if (!nativePort) return;
+    
+    const states = [];
+    tabMediaState.forEach((state, tabId) => {
+        states.push({
+            tabId: tabId,
+            playing: state.playing,
+            title: state.title,
+            url: state.url
+        });
+    });
+    
+    nativePort.postMessage({
+        type: "tabStates",
+        tabs: states
+    });
+}
+
+// Pause media in a specific tab (and mark as paused by extension)
+async function pauseTab(tabId, markAsPausedByExtension = true) {
+    try {
+        log(">>> SENDING PAUSE to tab", tabId);
+        const response = await chrome.tabs.sendMessage(tabId, { action: "pause" });
+        log("<<< PAUSE response from tab", tabId, ":", response);
+        
+        // Mark this tab as paused by extension so we can resume it later
+        if (markAsPausedByExtension) {
+            const state = tabMediaState.get(tabId);
+            if (state) {
+                state.pausedByExtension = true;
+                tabMediaState.set(tabId, state);
+                log("  Marked tab", tabId, "as pausedByExtension=true");
+            }
+        }
+    } catch (e) {
+        log("!!! PAUSE FAILED for tab", tabId, "- Error:", e.message);
+    }
+}
+
+// Play media in a specific tab
+async function playTab(tabId) {
+    try {
+        log(">>> SENDING PLAY to tab", tabId);
+        const response = await chrome.tabs.sendMessage(tabId, { action: "play" });
+        log("<<< PLAY response from tab", tabId, ":", response);
+        
+        // Clear the pausedByExtension flag
+        const state = tabMediaState.get(tabId);
+        if (state) {
+            state.pausedByExtension = false;
+            tabMediaState.set(tabId, state);
+            log("  Cleared pausedByExtension flag for tab", tabId);
+        }
+    } catch (e) {
+        log("!!! PLAY FAILED for tab", tabId, "- Error:", e.message);
+    }
+}
+
+// Pause all tabs except the specified one
+async function pauseAllTabsExcept(exceptTabId) {
+    for (const [tabId, state] of tabMediaState) {
+        if (tabId !== exceptTabId && state.playing) {
+            await pauseTab(tabId);
+        }
+    }
+}
+
+// Listen for messages from content scripts
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!sender.tab) {
+        log("Message from non-tab context:", message);
+        return;
+    }
+    
+    const tabId = sender.tab.id;
+    
+    switch (message.type) {
+        case "mediaStateChanged":
+            const oldState = tabMediaState.get(tabId);
+            tabMediaState.set(tabId, {
+                playing: message.playing,
+                title: sender.tab.title || "",
+                url: sender.tab.url || ""
+            });
+            
+            log("*** MEDIA STATE CHANGED ***");
+            log("  Tab:", tabId);
+            log("  Title:", sender.tab.title);
+            log("  Was:", oldState?.playing ? "PLAYING" : "PAUSED/NONE");
+            log("  Now:", message.playing ? "PLAYING" : "PAUSED");
+            logState();
+            
+            // Notify native app
+            if (nativePort) {
+                nativePort.postMessage({
+                    type: "mediaStateChanged",
+                    tabId: tabId,
+                    playing: message.playing,
+                    title: sender.tab.title,
+                    url: sender.tab.url
+                });
+            }
+            break;
+            
+        case "mediaDetected":
+            log("Media element detected in tab", tabId, "-", sender.tab.title);
+            if (!tabMediaState.has(tabId)) {
+                tabMediaState.set(tabId, {
+                    playing: false,
+                    title: sender.tab.title || "",
+                    url: sender.tab.url || ""
+                });
+            }
+            break;
+    }
+    
+    sendResponse({ success: true });
+    return true;
+});
+
+// Clean up when tab is closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+    tabMediaState.delete(tabId);
+    
+    if (nativePort) {
+        nativePort.postMessage({
+            type: "tabClosed",
+            tabId: tabId
+        });
+    }
+});
+
+// Track active tab changes - THIS IS THE CORE LOGIC FOR PER-TAB PAUSE
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    try {
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        
+        log("========================================");
+        log("TAB ACTIVATED EVENT");
+        log("  New tab:", activeInfo.tabId, "in window", activeInfo.windowId);
+        log("  Title:", tab.title);
+        log("  Previous tab:", lastActiveTabId, "in window", lastActiveWindowId);
+        log("  Settings: pauseOnTabSwitch =", settings.pauseOnTabSwitch);
+        
+        // Only pause if setting is enabled
+        if (settings.pauseOnTabSwitch && lastActiveTabId !== null && lastActiveTabId !== activeInfo.tabId) {
+            const prevState = tabMediaState.get(lastActiveTabId);
+            log("  Previous tab state:", prevState ? (prevState.playing ? "PLAYING" : "PAUSED") : "NOT TRACKED");
+            
+            if (prevState && prevState.playing) {
+                log("  >>> WILL PAUSE previous tab:", lastActiveTabId, "-", prevState.title);
+                await pauseTab(lastActiveTabId);
+            } else {
+                log("  >>> NOT pausing previous tab (not playing or not tracked)");
+            }
+        } else if (!settings.pauseOnTabSwitch) {
+            log("  >>> Tab pause DISABLED in settings, skipping");
+        } else {
+            log("  >>> Same tab or no previous tab, skipping pause logic");
+        }
+        
+        // Update tracking
+        lastActiveTabId = activeInfo.tabId;
+        lastActiveWindowId = activeInfo.windowId;
+        log("  Updated lastActiveTabId to:", lastActiveTabId);
+        log("========================================");
+        
+        // Notify native app if connected
+        if (nativePort) {
+            nativePort.postMessage({
+                type: "tabActivated",
+                tabId: activeInfo.tabId,
+                windowId: activeInfo.windowId,
+                title: tab.title,
+                url: tab.url
+            });
+        }
+    } catch (e) {
+        log("!!! ERROR in tab activation handler:", e.message);
+    }
+});
+
+// Track window focus changes
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        // Browser lost focus - PAUSE all playing media in this profile
+        // This handles: switching to another app OR another browser profile's window
+        log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        log("BROWSER LOST FOCUS (switched to another app or profile)");
+        log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        
+        // Pause all playing tabs when browser loses focus
+        if (settings.pauseOnWindowSwitch) {
+            for (const [tabId, state] of tabMediaState) {
+                if (state.playing) {
+                    log(">>> Pausing tab due to browser losing focus:", tabId, state.title);
+                    await pauseTab(tabId);
+                }
+            }
+        }
+        
+        if (nativePort) {
+            nativePort.postMessage({
+                type: "browserLostFocus"
+            });
+        }
+        return;
+    }
+    
+    try {
+        const tabs = await chrome.tabs.query({ active: true, windowId: windowId });
+        if (tabs.length > 0) {
+            const tab = tabs[0];
+            
+            log("########################################");
+            log("WINDOW/BROWSER GAINED FOCUS");
+            log("  Window:", windowId, "active tab:", tab.id);
+            log("  Title:", tab.title);
+            log("  Previous tab:", lastActiveTabId, "in window", lastActiveWindowId);
+            log("  Settings: pauseOnWindowSwitch =", settings.pauseOnWindowSwitch);
+            log("  Settings: autoPlayOnWindowFocus =", settings.autoPlayOnWindowFocus);
+            
+            const isWindowSwitch = lastActiveWindowId !== windowId;
+            const isTabSwitch = lastActiveTabId !== tab.id;
+            log("  isWindowSwitch:", isWindowSwitch, "isTabSwitch:", isTabSwitch);
+            
+            // PAUSE previous window's tab if setting enabled and we switched windows
+            if (settings.pauseOnWindowSwitch && isWindowSwitch && lastActiveTabId !== null && lastActiveTabId !== tab.id) {
+                const prevState = tabMediaState.get(lastActiveTabId);
+                log("  Previous tab state:", prevState ? JSON.stringify(prevState) : "NOT TRACKED");
+                
+                // Try to pause if playing OR if not tracked (might still have media)
+                if (prevState && prevState.playing) {
+                    log("  >>> WILL PAUSE previous window's tab:", lastActiveTabId, "-", prevState.title);
+                    await pauseTab(lastActiveTabId);
+                } else if (!prevState) {
+                    // Tab not tracked - try to pause anyway (best effort)
+                    log("  >>> Previous tab NOT TRACKED, trying to pause anyway:", lastActiveTabId);
+                    await pauseTab(lastActiveTabId, false); // Don't mark as pausedByExtension since we're not sure
+                } else {
+                    log("  >>> NOT pausing previous tab (already paused)");
+                }
+            } else if (!settings.pauseOnWindowSwitch) {
+                log("  >>> Window pause DISABLED in settings, skipping");
+            } else if (!isWindowSwitch) {
+                log("  >>> Same window, skipping pause logic");
+            } else {
+                log("  >>> No previous tab or same tab, skipping pause logic");
+            }
+            
+            // AUTO-PLAY current window's tab if setting enabled and it was paused by extension
+            // This triggers when browser regains focus (after BROWSER_LOST_FOCUS)
+            if (settings.autoPlayOnWindowFocus) {
+                const currentState = tabMediaState.get(tab.id);
+                log("  Current tab state:", currentState ? JSON.stringify(currentState) : "NOT TRACKED");
+                
+                if (currentState && currentState.pausedByExtension) {
+                    log("  >>> WILL AUTO-PLAY current tab:", tab.id, "-", currentState.title);
+                    await playTab(tab.id);
+                } else {
+                    log("  >>> NOT auto-playing (not paused by extension or not tracked)");
+                }
+            } else {
+                log("  >>> Auto-play DISABLED in settings, skipping");
+            }
+            
+            // Update tracking
+            lastActiveTabId = tab.id;
+            lastActiveWindowId = windowId;
+            log("  Updated tracking to tab:", lastActiveTabId, "window:", lastActiveWindowId);
+            log("########################################");
+            
+            if (nativePort) {
+                nativePort.postMessage({
+                    type: "windowFocused",
+                    windowId: windowId,
+                    tabId: tab.id,
+                    title: tab.title,
+                    url: tab.url
+                });
+            }
+        }
+    } catch (e) {
+        log("!!! ERROR in window focus handler:", e.message);
+    }
+});
+
+// Initialize the last active tab on startup
+async function initializeActiveTab() {
+    try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tabs.length > 0) {
+            lastActiveTabId = tabs[0].id;
+            lastActiveWindowId = tabs[0].windowId;
+            log("Initialized with active tab:", lastActiveTabId, "window:", lastActiveWindowId);
+            log("Tab title:", tabs[0].title);
+        } else {
+            log("No active tab found during initialization");
+        }
+    } catch (e) {
+        log("!!! Error initializing active tab:", e.message);
+    }
+}
+
+// Listen for settings changes from options page
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'settingsChanged') {
+        settings = { ...settings, ...message.settings };
+        log("Settings updated from options page:", settings);
+        sendResponse({ success: true });
+        return true;
+    }
+});
+
+// Listen for storage changes (in case settings changed from another context)
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'sync') {
+        for (const [key, { newValue }] of Object.entries(changes)) {
+            if (key in settings) {
+                settings[key] = newValue;
+                log("Setting changed:", key, "=", newValue);
+            }
+        }
+    }
+});
+
+// Initialize
+log("==============================================");
+log("BACKGROUND MUTER EXTENSION STARTING");
+log("==============================================");
+
+// Load settings first, then initialize
+(async () => {
+    await loadSettings();
+    await initializeActiveTab();
+    connectNativeHost();
+    log("Extension initialized - ready to track tabs");
+    logState();
+})();

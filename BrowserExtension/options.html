@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Background Muter - Settings</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            min-width: 400px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #4cc9f0;
+        }
+        .setting-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #16213e;
+            border-radius: 8px;
+        }
+        .setting-group h2 {
+            font-size: 14px;
+            margin: 0 0 10px 0;
+            color: #4cc9f0;
+        }
+        .setting-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .setting-item:last-child {
+            margin-bottom: 0;
+        }
+        .setting-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            accent-color: #4cc9f0;
+        }
+        .setting-item label {
+            flex: 1;
+            cursor: pointer;
+        }
+        .description {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+            margin-left: 28px;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 13px;
+            display: none;
+        }
+        .status.success {
+            display: block;
+            background: #0f5132;
+            color: #75b798;
+        }
+    </style>
+</head>
+<body>
+    <h1>Background Muter - Tab Control Settings</h1>
+    
+    <div class="setting-group">
+        <h2>Tab Switching Behavior</h2>
+        <div class="setting-item">
+            <input type="checkbox" id="pauseOnTabSwitch">
+            <label for="pauseOnTabSwitch">Pause media when switching tabs</label>
+        </div>
+        <div class="description">When you switch to a different tab in the same window, pause media in the previous tab.</div>
+    </div>
+    
+    <div class="setting-group">
+        <h2>Window Switching Behavior</h2>
+        <div class="setting-item">
+            <input type="checkbox" id="pauseOnWindowSwitch">
+            <label for="pauseOnWindowSwitch">Pause media when switching windows</label>
+        </div>
+        <div class="description">When you switch to a different browser window, pause media in the previous window.</div>
+        
+        <div class="setting-item" style="margin-top: 15px;">
+            <input type="checkbox" id="autoPlayOnWindowFocus">
+            <label for="autoPlayOnWindowFocus">Auto-play media when window gains focus</label>
+        </div>
+        <div class="description">When a window gains focus, automatically resume playing media that was paused by this extension.</div>
+    </div>
+    
+    <div id="status" class="status"></div>
+    
+    <script src="options.js"></script>
+</body>
+</html>

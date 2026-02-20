@@ -17,6 +17,8 @@
 */
 
 using System.Diagnostics;
+using WinBGMuter.Browser;
+using WinBGMuter.Config;
 
 namespace WinBGMuter
 {
@@ -31,8 +33,84 @@ namespace WinBGMuter
             Process myproc = Process.GetCurrentProcess();
             myproc.PriorityClass = ProcessPriorityClass.BelowNormal;
 
+            // Check if launched by browser extension for native messaging
+            if (IsNativeMessagingLaunch(args))
+            {
+                RunNativeMessagingHost();
+                return;
+            }
+
+            SettingsFileStore.Load();
             ApplicationConfiguration.Initialize();
             Application.Run(new MainForm(args));
+        }
+
+        /// <summary>
+        /// Check if the app was launched by browser for native messaging.
+        /// </summary>
+        private static bool IsNativeMessagingLaunch(string[] args)
+        {
+            if (args.Length == 0)
+            {
+                return false;
+            }
+
+            foreach (var arg in args)
+            {
+                // Chrome/Edge extension origin
+                if (arg.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                // Native messaging parent window argument
+                if (arg.StartsWith("--parent-window=", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Run as a native messaging host for browser extension communication.
+        /// Connects to the main app's BrowserCoordinator to forward messages.
+        /// </summary>
+        private static void RunNativeMessagingHost()
+        {
+            using var host = new NativeMessagingHost();
+            using var coordinatorClient = new BrowserCoordinatorClient();
+            
+            // Try to connect to the main app's coordinator
+            bool connectedToCoordinator = coordinatorClient.TryConnect(2000);
+            
+            if (connectedToCoordinator)
+            {
+                // Forward messages from coordinator to extension (via stdout)
+                coordinatorClient.MessageReceived += (s, json) =>
+                {
+                    host.SendRawMessage(json);
+                };
+                
+                // Forward extension events to coordinator
+                host.WindowFocused += (s, e) =>
+                {
+                    coordinatorClient.SendMessage(new { type = "windowFocused", e.TabId, e.WindowId, e.Title });
+                };
+                host.BrowserLostFocus += (s, e) =>
+                {
+                    coordinatorClient.SendMessage(new { type = "browserLostFocus" });
+                };
+                host.TabStateChanged += (s, e) =>
+                {
+                    coordinatorClient.SendMessage(new { type = "mediaStateChanged", e.TabId, e.IsPlaying, e.Title });
+                };
+            }
+            
+            host.Start();
+
+            // Keep running until stdin is closed (browser disconnects)
+            host.WaitForExit();
         }
     }
 }

@@ -1,0 +1,9 @@
+{
+  "name": "com.backgroundmuter.tabcontrol",
+  "description": "Native messaging host for Background Muter tab control",
+  "path": "C:\\Windows_software\\Background-Muter\\WinBGMute\\bin\\Release\\net8.0-windows10.0.22621.0\\WinBGMuter.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://iijhjcgkepdliacfpbjdmkkliljbfbjd/"
+  ]
+}
