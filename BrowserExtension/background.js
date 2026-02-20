@@ -29,6 +29,9 @@ const tabMediaState = new Map(); // tabId -> { playing: bool, title: string, url
 let lastPlayingTabId = null;
 let lastActiveTabId = null;
 let lastActiveWindowId = null;
+let pendingFocusLossTimer = null;
+
+const FOCUS_LOSS_DEBOUNCE_MS = 800;
 
 function isWindowPlaying(windowId) {
     for (const state of tabMediaState.values()) {
@@ -37,6 +40,50 @@ function isWindowPlaying(windowId) {
         }
     }
     return false;
+}
+
+function scheduleFocusLossPause() {
+    if (pendingFocusLossTimer) {
+        clearTimeout(pendingFocusLossTimer);
+        pendingFocusLossTimer = null;
+    }
+
+    pendingFocusLossTimer = setTimeout(async () => {
+        pendingFocusLossTimer = null;
+
+        try {
+            const windows = await chrome.windows.getAll({ populate: false });
+            const hasFocused = windows.some(w => w.focused);
+            if (hasFocused) {
+                log("BROWSER LOST FOCUS canceled (another Edge window is focused)");
+                return;
+            }
+        } catch (e) {
+            log("BROWSER LOST FOCUS check failed:", e.message);
+        }
+
+        log("BROWSER LOST FOCUS (confirmed)");
+        if (settings.pauseOnWindowSwitch) {
+            pauseAllTabs().catch(() => {});
+        }
+        if (nativePort) {
+            nativePort.postMessage({ type: "browserLostFocus" });
+        }
+    }, FOCUS_LOSS_DEBOUNCE_MS);
+}
+
+function clearFocusLossPause() {
+    if (!pendingFocusLossTimer) return;
+    clearTimeout(pendingFocusLossTimer);
+    pendingFocusLossTimer = null;
+}
+
+async function tryGetTabState(tabId) {
+    try {
+        return await chrome.tabs.sendMessage(tabId, { action: "getState" });
+    } catch (e) {
+        return null;
+    }
 }
 
 // Settings (loaded from storage)
@@ -334,8 +381,10 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
         log("  Previous tab:", lastActiveTabId, "in window", lastActiveWindowId);
         log("  Settings: pauseOnTabSwitch =", settings.pauseOnTabSwitch);
         
-        // Only pause if setting is enabled
-        if (settings.pauseOnTabSwitch && lastActiveTabId !== null && lastActiveTabId !== activeInfo.tabId) {
+        const isSameWindow = lastActiveWindowId === activeInfo.windowId;
+
+        // Only pause if setting is enabled and this is a same-window tab switch
+        if (settings.pauseOnTabSwitch && isSameWindow && lastActiveTabId !== null && lastActiveTabId !== activeInfo.tabId) {
             const prevState = tabMediaState.get(lastActiveTabId);
             log("  Previous tab state:", prevState ? (prevState.playing ? "PLAYING" : "PAUSED") : "NOT TRACKED");
             
@@ -347,6 +396,8 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
             }
         } else if (!settings.pauseOnTabSwitch) {
             log("  >>> Tab pause DISABLED in settings, skipping");
+        } else if (!isSameWindow) {
+            log("  >>> Tab switch across windows, skipping pause logic");
         } else {
             log("  >>> Same tab or no previous tab, skipping pause logic");
         }
@@ -384,29 +435,15 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 // Track window focus changes
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
     if (windowId === chrome.windows.WINDOW_ID_NONE) {
-        // Browser lost focus - PAUSE all playing media in this profile
-        // This handles: switching to another app OR another browser profile's window
+        // Browser may have lost focus (or switching between windows).
         log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        log("BROWSER LOST FOCUS (switched to another app or profile)");
+        log("BROWSER LOST FOCUS (pending confirmation)");
         log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        
-        // Pause all playing tabs when browser loses focus
-        if (settings.pauseOnWindowSwitch) {
-            for (const [tabId, state] of tabMediaState) {
-                if (state.playing) {
-                    log(">>> Pausing tab due to browser losing focus:", tabId, state.title);
-                    await pauseTab(tabId);
-                }
-            }
-        }
-        
-        if (nativePort) {
-            nativePort.postMessage({
-                type: "browserLostFocus"
-            });
-        }
+        scheduleFocusLossPause();
         return;
     }
+
+    clearFocusLossPause();
     
     try {
         const tabs = await chrome.tabs.query({ active: true, windowId: windowId });
@@ -424,6 +461,19 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
             const isWindowSwitch = lastActiveWindowId !== windowId;
             const isTabSwitch = lastActiveTabId !== tab.id;
             log("  isWindowSwitch:", isWindowSwitch, "isTabSwitch:", isTabSwitch);
+
+            const activeState = await tryGetTabState(tab.id);
+            if (activeState && typeof activeState.playing === "boolean") {
+                const existing = tabMediaState.get(tab.id);
+                tabMediaState.set(tab.id, {
+                    playing: activeState.playing,
+                    title: tab.title || existing?.title || "",
+                    url: tab.url || existing?.url || "",
+                    windowId: windowId,
+                    pausedByExtension: existing?.pausedByExtension || false
+                });
+            }
+
             const targetWindowHasPlaying = isWindowPlaying(windowId);
             log("  Target window has playing media:", targetWindowHasPlaying);
             
