@@ -47,6 +47,7 @@ namespace WinBGMuter.Foreground
         private readonly System.Timers.Timer _debounceTimer;
         private readonly object _sync = new();
         private int _lastPid = -1;
+        private IntPtr _lastHwnd = IntPtr.Zero;
         private int _pendingPid = -1;
         private IntPtr _pendingHwnd = IntPtr.Zero;
         private IntPtr _hook = IntPtr.Zero;
@@ -126,13 +127,20 @@ namespace WinBGMuter.Foreground
                 _pendingHwnd = IntPtr.Zero;
             }
 
-            if (pid == -1 || pid == _lastPid)
+            if (pid == -1)
+            {
+                return;
+            }
+
+            // Fire event if PID changed OR if window handle changed (same-process window switch)
+            if (pid == _lastPid && hwnd == _lastHwnd)
             {
                 return;
             }
 
             var previous = _lastPid;
             _lastPid = pid;
+            _lastHwnd = hwnd;
             var title = GetWindowTitleSafe(hwnd);
             ForegroundChanged?.Invoke(this, new ForegroundChangedEventArgs(previous, pid, hwnd, DateTimeOffset.UtcNow, title));
         }

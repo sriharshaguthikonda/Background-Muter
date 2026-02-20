@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using WinBGMuter.Abstractions;
+using WinBGMuter.Browser;
 using WinBGMuter.Config;
 using WinBGMuter.Controller;
 using WinBGMuter.UI;
@@ -13,6 +14,7 @@ namespace WinBGMuter
     {
         private AppController? _appController;
         private PauseOnUnfocusSettings? _pauseSettings;
+        private BrowserCoordinator? _browserCoordinator;
 
         private CheckBox? _pauseOnUnfocusCheckbox;
         private CheckBox? _autoPlaySpotifyCheckbox;
@@ -25,6 +27,12 @@ namespace WinBGMuter
         {
             _pauseSettings = new PauseOnUnfocusSettings();
             _pauseSettings.Load();
+
+            // Start the browser coordinator for cross-profile extension communication
+            _browserCoordinator = new BrowserCoordinator();
+            _browserCoordinator.Start();
+            LoggingEngine.LogLine("[PauseOnUnfocus] BrowserCoordinator started for extension communication",
+                category: LoggingEngine.LogCategory.MediaControl);
 
             if (m_volumeMixer == null)
             {

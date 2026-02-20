@@ -4,98 +4,170 @@ using System.Runtime.InteropServices;
 namespace WinBGMuter.Media
 {
     /// <summary>
-    /// Sends per-window media commands via WM_APPCOMMAND to allow window-level control (e.g., Edge).
+    /// Sends media commands (play, pause, stop) to specific windows using WM_APPCOMMAND.
+    /// This enables per-window media control, unlike GSMTC which is app-level.
     /// </summary>
     internal static class Win32MediaCommandController
     {
         private const int WM_APPCOMMAND = 0x0319;
+
+        // Media command codes (shifted left by 16 bits for lParam)
         private const int APPCOMMAND_MEDIA_PLAY = 46;
         private const int APPCOMMAND_MEDIA_PAUSE = 47;
+        private const int APPCOMMAND_MEDIA_PLAY_PAUSE = 14;
+        private const int APPCOMMAND_MEDIA_STOP = 13;
+        private const int APPCOMMAND_MEDIA_NEXTTRACK = 11;
+        private const int APPCOMMAND_MEDIA_PREVIOUSTRACK = 12;
 
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+        // For simulating key presses
+        private const byte VK_MEDIA_PLAY_PAUSE = 0xB3;
+        private const int KEYEVENTF_EXTENDEDKEY = 0x0001;
+        private const int KEYEVENTF_KEYUP = 0x0002;
 
-        [DllImport("user32.dll")]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-
-        [DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 
-        public static bool TryPause(int pid, out string handleKey)
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool PostMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern void keybd_event(byte bVk, byte bScan, int dwFlags, int dwExtraInfo);
+
+        private const uint GA_ROOT = 2;
+
+        /// <summary>
+        /// Sends a pause command to the specified window.
+        /// </summary>
+        public static bool SendPause(IntPtr hWnd)
         {
-            var hwnd = FindWindowForPid(pid);
-            if (hwnd == IntPtr.Zero)
+            if (hWnd == IntPtr.Zero)
             {
-                handleKey = string.Empty;
                 return false;
             }
 
-            SendAppCommand(hwnd, APPCOMMAND_MEDIA_PAUSE);
-            handleKey = BuildHandleKey(hwnd);
+            var lParam = MakeCommandLParam(APPCOMMAND_MEDIA_PAUSE);
+            var result = SendMessage(hWnd, WM_APPCOMMAND, hWnd, lParam);
+            
+            LoggingEngine.LogLine($"[Win32Media] SendPause to {hWnd} -> result={result}",
+                category: LoggingEngine.LogCategory.MediaControl);
+            
             return true;
         }
 
-        public static bool TryResume(string handleKey)
+        /// <summary>
+        /// Sends a play command to the specified window.
+        /// </summary>
+        public static bool SendPlay(IntPtr hWnd)
         {
-            if (!TryParseHandleKey(handleKey, out var hwnd) || hwnd == IntPtr.Zero)
+            if (hWnd == IntPtr.Zero)
             {
                 return false;
             }
 
-            SendAppCommand(hwnd, APPCOMMAND_MEDIA_PLAY);
+            var lParam = MakeCommandLParam(APPCOMMAND_MEDIA_PLAY);
+            var result = SendMessage(hWnd, WM_APPCOMMAND, hWnd, lParam);
+            
+            LoggingEngine.LogLine($"[Win32Media] SendPlay to {hWnd} -> result={result}",
+                category: LoggingEngine.LogCategory.MediaControl);
+            
             return true;
         }
 
-        private static void SendAppCommand(IntPtr hwnd, int command)
+        /// <summary>
+        /// Sends a play/pause toggle command to the specified window.
+        /// </summary>
+        public static bool SendPlayPauseToggle(IntPtr hWnd)
         {
-            // Return value is command routing info; no reliable success indicator, so we just send.
-            SendMessage(hwnd, WM_APPCOMMAND, hwnd, new IntPtr(command << 16));
-        }
-
-        private static bool TryParseHandleKey(string handleKey, out IntPtr hwnd)
-        {
-            hwnd = IntPtr.Zero;
-            if (string.IsNullOrWhiteSpace(handleKey))
+            if (hWnd == IntPtr.Zero)
             {
                 return false;
             }
 
-            const string prefix = "HWND:";
-            if (!handleKey.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            var lParam = MakeCommandLParam(APPCOMMAND_MEDIA_PLAY_PAUSE);
+            var result = SendMessage(hWnd, WM_APPCOMMAND, hWnd, lParam);
+            
+            LoggingEngine.LogLine($"[Win32Media] SendPlayPauseToggle to {hWnd} -> result={result}",
+                category: LoggingEngine.LogCategory.MediaControl);
+            
+            return true;
+        }
+
+        /// <summary>
+        /// Sends a stop command to the specified window.
+        /// </summary>
+        public static bool SendStop(IntPtr hWnd)
+        {
+            if (hWnd == IntPtr.Zero)
             {
                 return false;
             }
 
-            var hex = handleKey.Substring(prefix.Length);
-            if (long.TryParse(hex, System.Globalization.NumberStyles.HexNumber, null, out var value))
-            {
-                hwnd = new IntPtr(value);
-                return true;
-            }
-
-            return false;
+            var lParam = MakeCommandLParam(APPCOMMAND_MEDIA_STOP);
+            var result = SendMessage(hWnd, WM_APPCOMMAND, hWnd, lParam);
+            
+            LoggingEngine.LogLine($"[Win32Media] SendStop to {hWnd} -> result={result}",
+                category: LoggingEngine.LogCategory.MediaControl);
+            
+            return true;
         }
 
-        private static string BuildHandleKey(IntPtr hwnd) => $"HWND:{hwnd.ToInt64():X}";
-
-        private static IntPtr FindWindowForPid(int pid)
+        /// <summary>
+        /// Posts a pause command asynchronously to the specified window.
+        /// Tries multiple approaches: direct window, root ancestor, and keyboard simulation.
+        /// </summary>
+        public static bool PostPause(IntPtr hWnd)
         {
-            IntPtr result = IntPtr.Zero;
-
-            EnumWindows((hWnd, lParam) =>
+            if (hWnd == IntPtr.Zero)
             {
-                if (GetWindowThreadProcessId(hWnd, out var windowPid) != 0 && windowPid == (uint)pid)
-                {
-                    result = hWnd;
-                    return false; // stop enumeration
-                }
+                return false;
+            }
 
-                return true; // continue enumeration
-            }, IntPtr.Zero);
+            // Try 1: Send to the root ancestor window (works better for browsers)
+            var rootHwnd = GetAncestor(hWnd, GA_ROOT);
+            if (rootHwnd != IntPtr.Zero && rootHwnd != hWnd)
+            {
+                var lParam = MakeCommandLParam(APPCOMMAND_MEDIA_PAUSE);
+                SendMessage(rootHwnd, WM_APPCOMMAND, rootHwnd, lParam);
+                LoggingEngine.LogLine($"[Win32Media] SendPause to root {rootHwnd} (from {hWnd})",
+                    category: LoggingEngine.LogCategory.MediaControl);
+            }
 
+            // Try 2: Post to the window itself
+            var lParam2 = MakeCommandLParam(APPCOMMAND_MEDIA_PAUSE);
+            var result = PostMessage(hWnd, WM_APPCOMMAND, hWnd, lParam2);
+            
+            LoggingEngine.LogLine($"[Win32Media] PostPause to {hWnd} -> success={result}",
+                category: LoggingEngine.LogCategory.MediaControl);
+            
             return result;
+        }
+
+        /// <summary>
+        /// Sends a global media play/pause key press using keyboard simulation.
+        /// This pauses whatever media is currently active system-wide.
+        /// </summary>
+        public static void SendGlobalMediaPlayPause()
+        {
+            keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_EXTENDEDKEY, 0);
+            keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+            
+            LoggingEngine.LogLine($"[Win32Media] Sent global Media Play/Pause key",
+                category: LoggingEngine.LogCategory.MediaControl);
+        }
+
+        private static IntPtr MakeCommandLParam(int command)
+        {
+            // lParam format: command << 16
+            return new IntPtr(command << 16);
         }
     }
 }

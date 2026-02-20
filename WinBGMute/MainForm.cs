@@ -23,6 +23,7 @@ using System.Runtime.InteropServices;
 using System.Timers;
 using System.Linq;
 using WinBGMuter.Config;
+using WinBGMuter.Helpers;
 
 namespace WinBGMuter
 {
@@ -83,14 +84,18 @@ namespace WinBGMuter
 
         private sealed class ProcessDisplayItem
         {
-            public ProcessDisplayItem(string processName, string? windowTitle)
+            public ProcessDisplayItem(string processName, string? windowTitle, IntPtr windowHandle = default, int processId = 0)
             {
                 ProcessName = processName;
                 WindowTitle = windowTitle;
+                WindowHandle = windowHandle;
+                ProcessId = processId;
             }
 
             public string ProcessName { get; }
             public string? WindowTitle { get; }
+            public IntPtr WindowHandle { get; }
+            public int ProcessId { get; }
 
             public override string ToString()
             {
@@ -210,12 +215,15 @@ namespace WinBGMuter
 
             var autoPlayApp = Properties.Settings.Default.AutoPlayAppName?.Trim() ?? string.Empty;
 
-            foreach (var pid in audio_pids)
+            // Enumerate all visible windows for audio-producing processes
+            var allWindows = WindowEnumerator.GetWindowsForProcesses(audio_pids);
+            var addedProcesses = new HashSet<int>();
+
+            foreach (var window in allWindows)
             {
                 try
                 {
-                    Process proc = Process.GetProcessById(pid);
-                    string pname = proc.ProcessName;
+                    string pname = window.ProcessName;
 
                     // Exclusive: skip if in NeverMute or AutoPlay
                     if (NeverMuteListBox.Items.Cast<object?>().Any(i => string.Equals(ExtractProcessName(i), pname, StringComparison.OrdinalIgnoreCase)))
@@ -227,8 +235,38 @@ namespace WinBGMuter
                         continue;
                     }
 
-                    var title = TryGetWindowTitle(proc);
-                    ProcessListListBox.Items.Add(new ProcessDisplayItem(pname, title));
+                    ProcessListListBox.Items.Add(new ProcessDisplayItem(pname, window.Title, window.Handle, window.ProcessId));
+                    addedProcesses.Add(window.ProcessId);
+                }
+                catch (Exception ex)
+                {
+                    HandleError(ex, (object)window.ProcessId);
+                }
+            }
+
+            // Add processes that have audio but no visible windows (background audio)
+            foreach (var pid in audio_pids)
+            {
+                if (addedProcesses.Contains(pid))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    Process proc = Process.GetProcessById(pid);
+                    string pname = proc.ProcessName;
+
+                    if (NeverMuteListBox.Items.Cast<object?>().Any(i => string.Equals(ExtractProcessName(i), pname, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
+                    if (string.Equals(pname, autoPlayApp, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    ProcessListListBox.Items.Add(new ProcessDisplayItem(pname, "(background audio)", IntPtr.Zero, pid));
                 }
                 catch (Exception ex)
                 {

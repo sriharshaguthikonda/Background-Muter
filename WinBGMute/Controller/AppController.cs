@@ -9,7 +9,6 @@ using WinBGMuter.Foreground;
 using WinBGMuter.Media;
 using WinBGMuter.Policy;
 using WinBGMuter.State;
-using static WinBGMuter.LoggingEngine;
 
 namespace WinBGMuter.Controller
 {
@@ -33,6 +32,11 @@ namespace WinBGMuter.Controller
         private Func<IEnumerable<string>>? _getNeverPauseList;
         private int _pauseCooldownMs = 7000;
         private long _cooldownDeadlineMs = 0;
+
+        // Per-window tracking for same-process window switching
+        private IntPtr _previousWindowHandle = IntPtr.Zero;
+        private int _previousWindowPid = -1;
+        private string _previousWindowTitle = string.Empty;
 
         public AppController(
             VolumeMixer volumeMixer,
@@ -244,6 +248,7 @@ namespace WinBGMuter.Controller
             await WaitForCooldownAsync().ConfigureAwait(false);
 
             var foregroundPid = e.CurrentPid;
+            var foregroundHwnd = e.Hwnd;
             var foregroundTitle = string.IsNullOrWhiteSpace(e.WindowTitle) ? "<no title>" : e.WindowTitle.Trim();
             string foregroundProcessName = "<unknown>";
 
@@ -258,6 +263,29 @@ namespace WinBGMuter.Controller
 
             LoggingEngine.LogLine($"[AppController] Foreground changed to {foregroundProcessName} (PID {foregroundPid}) Title=\"{foregroundTitle}\"",
                 category: LoggingEngine.LogCategory.Foreground);
+
+            // Per-window pause: If switching between different windows of the same process,
+            // send pause to the previous window (but NOT for browsers - they use extension)
+            if (_previousWindowHandle != IntPtr.Zero && 
+                _previousWindowHandle != foregroundHwnd &&
+                _previousWindowPid == foregroundPid &&
+                !IsBrowserProcess(foregroundProcessName))
+            {
+                LoggingEngine.LogLine($"[AppController] Same-process window switch detected, pausing previous window: {_previousWindowTitle}",
+                    category: LoggingEngine.LogCategory.MediaControl);
+                
+                Win32MediaCommandController.PostPause(_previousWindowHandle);
+            }
+            else if (IsBrowserProcess(foregroundProcessName) && _previousWindowHandle != foregroundHwnd)
+            {
+                LoggingEngine.LogLine($"[AppController] Browser window switch - skipping Win32 pause (extension handles this)",
+                    category: LoggingEngine.LogCategory.MediaControl);
+            }
+
+            // Update previous window tracking
+            _previousWindowHandle = foregroundHwnd;
+            _previousWindowPid = foregroundPid;
+            _previousWindowTitle = foregroundTitle;
 
             // 1) Get audio PIDs from VolumeMixer (already works for existing mute logic)
             int[] audioPids = _volumeMixer.GetPIDs();
@@ -278,20 +306,8 @@ namespace WinBGMuter.Controller
                 LoggingEngine.LogLine($"[AppController] Resuming {foregroundProcessName} (was paused by us)",
                     category: LoggingEngine.LogCategory.Policy);
 
-                PauseResult resumeResult;
-                if (string.Equals(pausedState.Method, "hwnd-appcommand", StringComparison.OrdinalIgnoreCase))
-                {
-                    var resumed = Win32MediaCommandController.TryResume(pausedState.SessionKey);
-                    resumeResult = resumed ? PauseResult.Success : PauseResult.Failed;
-                    LoggingEngine.LogLine($"[AppController] Resumed via WM_APPCOMMAND -> {(resumed ? "SUCCESS" : "FAILED")}",
-                        category: LoggingEngine.LogCategory.MediaControl,
-                        loglevel: resumed ? LOG_LEVEL_TYPE.LOG_INFO : LOG_LEVEL_TYPE.LOG_WARNING);
-                }
-                else
-                {
-                    var sessionKey = new MediaSessionKey(pausedState.SessionKey, null);
-                    resumeResult = await _pauseAction.TryResumeAsync(sessionKey).ConfigureAwait(false);
-                }
+                var sessionKey = new MediaSessionKey(pausedState.SessionKey, null);
+                var resumeResult = await _pauseAction.TryResumeAsync(sessionKey).ConfigureAwait(false);
 
                 if (resumeResult == PauseResult.Success)
                 {
@@ -313,27 +329,28 @@ namespace WinBGMuter.Controller
 
                 string processName = GetProcessName(pid);
 
+                // Skip if this is the same app as foreground (handles multi-process apps like browsers)
+                if (string.Equals(processName, foregroundProcessName, StringComparison.OrdinalIgnoreCase))
+                {
+                    LoggingEngine.LogLine($"[AppController] Skipping {processName} PID {pid} (same app as foreground)",
+                        category: LoggingEngine.LogCategory.Policy);
+                    continue;
+                }
+
+                // Skip browsers - they are controlled by the browser extension, not GSMTC
+                if (IsBrowserProcess(processName))
+                {
+                    LoggingEngine.LogLine($"[AppController] Skipping {processName} PID {pid} (browser - controlled by extension)",
+                        category: LoggingEngine.LogCategory.Policy);
+                    continue;
+                }
+
                 // Skip if in never-pause list
                 if (neverPauseList.Contains(processName))
                 {
                     LoggingEngine.LogLine($"[AppController] Skipping {processName} (in never-pause list)",
                         category: LoggingEngine.LogCategory.Policy);
                     continue;
-                }
-
-                // Edge multi-window: send WM_APPCOMMAND to the specific window handle instead of GSMTC session.
-                if (string.Equals(processName, "msedge", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (Win32MediaCommandController.TryPause(pid, out var handleKey))
-                    {
-                        _stateStore.MarkPaused(pid, "hwnd-appcommand", handleKey);
-                        LoggingEngine.LogLine($"[AppController] Paused {processName} via WM_APPCOMMAND (handle {handleKey})",
-                            category: LoggingEngine.LogCategory.Policy);
-                        continue;
-                    }
-                    LoggingEngine.LogLine($"[AppController] WM_APPCOMMAND pause failed for {processName}",
-                        category: LoggingEngine.LogCategory.Policy,
-                        loglevel: LOG_LEVEL_TYPE.LOG_WARNING);
                 }
 
                 var pauseActionResult = await _pauseAction.TryPauseAsync(processName).ConfigureAwait(false);
@@ -400,6 +417,22 @@ namespace WinBGMuter.Controller
             {
                 return "<unknown>";
             }
+        }
+
+        // Browsers are controlled by the browser extension, not GSMTC
+        private static readonly HashSet<string> BrowserProcessNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "msedge",
+            "chrome",
+            "firefox",
+            "brave",
+            "opera",
+            "vivaldi"
+        };
+
+        private static bool IsBrowserProcess(string processName)
+        {
+            return BrowserProcessNames.Contains(processName);
         }
 
         public void Dispose()
