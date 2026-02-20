@@ -17,13 +17,15 @@ function logState() {
     log("  lastActiveWindowId:", lastActiveWindowId);
     log("  tabMediaState size:", tabMediaState.size);
     tabMediaState.forEach((state, tabId) => {
-        log(`    Tab ${tabId}: window=${state.windowId}, playing=${state.playing}, title="${state.title}"`);
+        const frames = state.frameStates ? state.frameStates.size : 0;
+        log(`    Tab ${tabId}: window=${state.windowId}, playing=${state.playing}, frames=${frames}, title="${state.title}"`);
     });
     log("=============");
 }
 
 // Track tabs with active media
-const tabMediaState = new Map(); // tabId -> { playing: bool, title: string, url: string, windowId: number, pausedByExtension: bool }
+// tabId -> { playing: bool, title: string, url: string, windowId: number, pausedByExtension: bool, frameStates: Map<frameId, bool> }
+const tabMediaState = new Map();
 
 // Track the last active tab that was playing
 let lastPlayingTabId = null;
@@ -80,6 +82,10 @@ function clearFocusLossPause() {
 
 async function tryGetTabState(tabId) {
     try {
+        const existing = tabMediaState.get(tabId);
+        if (existing && typeof existing.playing === "boolean") {
+            return { playing: existing.playing, mediaCount: existing.frameStates?.size ?? 0 };
+        }
         return await chrome.tabs.sendMessage(tabId, { action: "getState" });
     } catch (e) {
         return null;
@@ -312,19 +318,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch (message.type) {
         case "mediaStateChanged":
             const oldState = tabMediaState.get(tabId);
+            const frameId = sender.frameId ?? 0;
+            const frameStates = oldState?.frameStates ?? new Map();
+            frameStates.set(frameId, message.playing);
+            const anyPlaying = Array.from(frameStates.values()).some(Boolean);
             tabMediaState.set(tabId, {
-                playing: message.playing,
+                playing: anyPlaying,
                 title: sender.tab.title || "",
                 url: sender.tab.url || "",
                 windowId: sender.tab.windowId,
-                pausedByExtension: oldState?.pausedByExtension || false
+                pausedByExtension: oldState?.pausedByExtension || false,
+                frameStates: frameStates
             });
             
             log("*** MEDIA STATE CHANGED ***");
             log("  Tab:", tabId);
             log("  Title:", sender.tab.title);
             log("  Was:", oldState?.playing ? "PLAYING" : "PAUSED/NONE");
-            log("  Now:", message.playing ? "PLAYING" : "PAUSED");
+            log("  Now:", anyPlaying ? "PLAYING" : "PAUSED");
             logState();
             
             // Notify native app
@@ -332,7 +343,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 nativePort.postMessage({
                     type: "mediaStateChanged",
                     tabId: tabId,
-                    playing: message.playing,
+                    playing: anyPlaying,
                     title: sender.tab.title,
                     url: sender.tab.url
                 });
@@ -342,12 +353,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case "mediaDetected":
             log("Media element detected in tab", tabId, "-", sender.tab.title);
             if (!tabMediaState.has(tabId)) {
+                const frameId = sender.frameId ?? 0;
+                const frameStates = new Map();
+                frameStates.set(frameId, false);
                 tabMediaState.set(tabId, {
                     playing: false,
                     title: sender.tab.title || "",
                     url: sender.tab.url || "",
                     windowId: sender.tab.windowId,
-                    pausedByExtension: false
+                    pausedByExtension: false,
+                    frameStates: frameStates
                 });
             }
             break;
@@ -465,12 +480,20 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
             const activeState = await tryGetTabState(tab.id);
             if (activeState && typeof activeState.playing === "boolean") {
                 const existing = tabMediaState.get(tab.id);
+                const frameStates = existing?.frameStates ?? new Map();
+                if (!existing?.frameStates) {
+                    frameStates.set(0, activeState.playing);
+                }
+                const aggregatedPlaying = frameStates.size > 0
+                    ? Array.from(frameStates.values()).some(Boolean)
+                    : activeState.playing;
                 tabMediaState.set(tab.id, {
-                    playing: activeState.playing,
+                    playing: aggregatedPlaying,
                     title: tab.title || existing?.title || "",
                     url: tab.url || existing?.url || "",
                     windowId: windowId,
-                    pausedByExtension: existing?.pausedByExtension || false
+                    pausedByExtension: existing?.pausedByExtension || false,
+                    frameStates: frameStates
                 });
             }
 
