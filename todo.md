@@ -21,18 +21,22 @@
 ### 2) Pause Logic
 - [ ] Core: pause media sessions when window loses focus; resume on regain.
 - [ ] Debounce: add grace period to avoid rapid pause/resume during quick Alt+Tab.
+- [ ] Coalesce foreground-change events so cooldown waits don't apply stale window data.
 - [ ] Optional “reduce volume instead of pause” mode (only if harmless to sessions).
 - [ ] Smart exclusions: never pause comms apps by default; user can override.
 - [ ] Respect windowed fullscreen/games that misbehave—option to ignore specific titles.
 
 ### 3) Session Handling
 - [ ] Track per-audio-session state; resume only sessions we paused.
+- [ ] Handle GSMTC sessions without AUMID so pause/resume can resolve them reliably.
 - [ ] Re-attach if a session restarts (new session ID) while app is backgrounded.
 - [ ] Handle multiple audio endpoints; remember per-endpoint rules.
 - [ ] Detect silent/inactive sessions and auto-resume if they were paused but go idle to avoid stuck state.
 
 ### 4) Reliability & Performance
 - [ ] Lightweight foreground detection + audio polling to minimize CPU.
+- [ ] Prevent AutoPlay timer reentrancy to avoid overlapping play/pause calls.
+- [ ] Release COM audio session objects on VolumeMixer reload to avoid leaks.
 - [ ] Add structured logging for pause/resume decisions; expose log location to users.
 - [ ] Fallback: if pausing fails, surface a user-visible notification/toast.
 - [ ] Optional “snooze pausing for N minutes” timer.
@@ -45,3 +49,7 @@
 ### 6) Documentation
 - [ ] Add FAQ/troubleshooting section explaining pause vs. mute, common edge cases.
 - [ ] Document privacy note if logs/telemetry are collected (telemetry off by default).
+
+### 7) Browser Extension
+- [ ] Aggregate per-frame media state per tab (all_frames) to prevent false "not playing".
+- [ ] Avoid duplicate runtime onMessage responders to prevent double replies.
