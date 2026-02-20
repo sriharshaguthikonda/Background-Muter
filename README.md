@@ -92,6 +92,7 @@ Open extension options (right-click icon → Options):
 
 # Troubleshooting
 * If it doesn’t pause when switching profiles: ensure native host is installed **in each profile** and BrowserCoordinator is running (main app open).
+* If the main app is closed, the extension will retry the native host with backoff (up to about 5 minutes), so you may see occasional host spawns.
 * If build fails due to locked exe: close running `WinBGMuter.exe` and rebuild.
 * To wipe stale registry entries for native host, rerun the install script with correct ExtensionId.
 * Developer note: native messaging uses length-prefixed stdin/stdout; avoid any other reads from stdin in the host process.
