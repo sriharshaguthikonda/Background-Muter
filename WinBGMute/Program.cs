@@ -110,10 +110,7 @@ namespace WinBGMuter
             host.Start();
 
             // Keep running until stdin is closed (browser disconnects)
-            while (Console.Read() != -1)
-            {
-                // Native messaging host handles messages via stdin
-            }
+            host.WaitForExit();
         }
     }
 }

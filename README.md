@@ -94,6 +94,7 @@ Open extension options (right-click icon → Options):
 * If it doesn’t pause when switching profiles: ensure native host is installed **in each profile** and BrowserCoordinator is running (main app open).
 * If build fails due to locked exe: close running `WinBGMuter.exe` and rebuild.
 * To wipe stale registry entries for native host, rerun the install script with correct ExtensionId.
+* Developer note: native messaging uses length-prefixed stdin/stdout; avoid any other reads from stdin in the host process.
 
 # Existing UI (classic)
 * Run **WinBGMuter.exe**. The application will automatically start muting background processes with default settings.
