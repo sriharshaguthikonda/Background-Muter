@@ -16,6 +16,7 @@
 - [x] Coalesce foreground-change events so cooldown waits don't apply stale window data.
 - [x] Handle GSMTC sessions without AUMID so pause/resume can resolve them reliably.
 - [x] Policy evaluation resolves process names per PID for accurate include/exclude behavior.
+- [x] Release COM audio session objects on VolumeMixer reload to avoid leaks.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
@@ -39,7 +40,6 @@
 
 ### 4) Reliability & Performance
 - [ ] Lightweight foreground detection + audio polling to minimize CPU.
-- [ ] Release COM audio session objects on VolumeMixer reload to avoid leaks.
 - [ ] Add structured logging for pause/resume decisions; expose log location to users.
 - [ ] Fallback: if pausing fails, surface a user-visible notification/toast.
 - [ ] Optional “snooze pausing for N minutes” timer.

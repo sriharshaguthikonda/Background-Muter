@@ -21,6 +21,7 @@ You can add exceptions for which applications are never muted.
 * Refreshed desktop UI layout for improved spacing and readability
 * Debounced foreground detection to reduce rapid mute/unmute flicker during fast app switching
 * Foreground change processing coalesces to the latest window to avoid stale pauses/resumes
+* Volume mixer releases audio session COM objects on reload to avoid leaks
 * **Per-tab media control for browsers via extension + native messaging (multi-profile aware)**
 * Browser extension aggregates per-frame media state to avoid false "not playing"
 * Extension settings messages are handled in a single listener to avoid duplicate replies

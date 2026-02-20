@@ -103,27 +103,19 @@ namespace WinBGMuter
 
         public void UnloadAudio(bool unloadDevice = false)
         {
-            List<object> com_objects = new List<object>();
-            if (unloadDevice)
-            {
+            ReleaseSessionObjects();
 
-                com_objects.Add(AudioDevice.sessionEnumerator);
-                com_objects.Add(AudioDevice.mgr);
-                com_objects.Add(AudioDevice.speakers);
-                com_objects.Add(AudioDevice.deviceEnumerator);
+            if (!unloadDevice)
+            {
+                return;
             }
 
-
-            if (AudioDevice.volumeSessionList is not null)
+            List<object> com_objects = new List<object>
             {
-                foreach (var vs in AudioDevice.volumeSessionList)
-                {
-                    IAudioSessionControl2 ctl = vs.Value as IAudioSessionControl2;
-                    com_objects.Add(ctl);
-
-                }
-            }
-            
+                AudioDevice.mgr,
+                AudioDevice.speakers,
+                AudioDevice.deviceEnumerator
+            };
 
             foreach (var obj in com_objects)
             {
@@ -131,7 +123,27 @@ namespace WinBGMuter
                 {
                     Marshal.ReleaseComObject(obj);
                 }
-                
+            }
+        }
+
+        private void ReleaseSessionObjects()
+        {
+            if (AudioDevice.volumeSessionList is not null)
+            {
+                foreach (var volume in AudioDevice.volumeSessionList.Values)
+                {
+                    if (volume is not null)
+                    {
+                        Marshal.ReleaseComObject(volume);
+                    }
+                }
+
+                AudioDevice.volumeSessionList.Clear();
+            }
+
+            if (AudioDevice.sessionEnumerator is not null)
+            {
+                Marshal.ReleaseComObject(AudioDevice.sessionEnumerator);
             }
         }
 
@@ -168,6 +180,14 @@ namespace WinBGMuter
                     AudioDevice.speakers.Activate(ref AudioDevice.IID_IAudioSessionManager2, 0, IntPtr.Zero, out AudioDevice.o);
                     AudioDevice.mgr = (IAudioSessionManager2)AudioDevice.o;
                 }
+                else
+                {
+                    ReleaseSessionObjects();
+                    if (AudioDevice.volumeSessionList is null)
+                    {
+                        AudioDevice.volumeSessionList = new Dictionary<int, ISimpleAudioVolume?>();
+                    }
+                }
 
                 //code takes too long
 
@@ -180,7 +200,6 @@ namespace WinBGMuter
 
 
 
-                AudioDevice.volumeSessionList.Clear();
                 ISimpleAudioVolume volumeControl = null;
                 for (int i = 0; i < AudioDevice.count; i++)
                 {
