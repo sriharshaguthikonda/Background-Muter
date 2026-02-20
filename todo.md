@@ -13,6 +13,7 @@
 - [x] Prevent AutoPlay timer reentrancy to avoid overlapping play/pause calls.
 - [x] Aggregate per-frame media state per tab (all_frames) to prevent false "not playing".
 - [x] Avoid duplicate runtime onMessage responders to prevent double replies.
+- [x] Coalesce foreground-change events so cooldown waits don't apply stale window data.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
@@ -24,7 +25,6 @@
 ### 2) Pause Logic
 - [ ] Core: pause media sessions when window loses focus; resume on regain.
 - [ ] Debounce: add grace period to avoid rapid pause/resume during quick Alt+Tab.
-- [ ] Coalesce foreground-change events so cooldown waits don't apply stale window data.
 - [ ] Optional “reduce volume instead of pause” mode (only if harmless to sessions).
 - [ ] Smart exclusions: never pause comms apps by default; user can override.
 - [ ] Respect windowed fullscreen/games that misbehave—option to ignore specific titles.

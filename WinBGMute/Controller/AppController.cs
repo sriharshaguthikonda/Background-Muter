@@ -23,13 +23,14 @@ namespace WinBGMuter.Controller
         private readonly PlaybackStateStore _stateStore;
         private readonly Func<bool>? _isExternalMediaPlaying;
 
-        private readonly SemaphoreSlim _processingLock = new(1, 1);
         private bool _enabled = true;
         private bool _autoPlaySpotify = false;
         private string _autoPlayAppName = "Spotify";
         private System.Timers.Timer? _autoPlayMonitorTimer;
         private bool _autoPlayAppPausedByUs = false;
         private int _autoPlayTickInProgress = 0;
+        private ForegroundChangedEventArgs? _pendingForegroundEvent;
+        private int _foregroundWorkerRunning = 0;
 
         private Func<IEnumerable<string>>? _getNeverPauseList;
         private int _pauseCooldownMs = 7000;
@@ -234,30 +235,44 @@ namespace WinBGMuter.Controller
                 return;
             }
 
-            // Avoid blocking the WinEvent callback thread
-            _ = Task.Run(async () =>
+            _pendingForegroundEvent = e;
+            if (Interlocked.Exchange(ref _foregroundWorkerRunning, 1) == 1)
             {
-                if (!await _processingLock.WaitAsync(0))
-                {
-                    // Skip if already processing
-                    return;
-                }
+                return;
+            }
 
-                try
+            _ = Task.Run(ProcessForegroundQueueAsync);
+        }
+
+        private async Task ProcessForegroundQueueAsync()
+        {
+            try
+            {
+                while (true)
                 {
-                    await ProcessForegroundChangeAsync(e).ConfigureAwait(false);
+                    var next = Interlocked.Exchange(ref _pendingForegroundEvent, null);
+                    if (next == null)
+                    {
+                        break;
+                    }
+
+                    await ProcessForegroundChangeAsync(next).ConfigureAwait(false);
                 }
-                catch (Exception ex)
+            }
+            catch (Exception ex)
+            {
+                LoggingEngine.LogLine($"[AppController] Error processing foreground change: {ex.Message}",
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING,
+                    category: LoggingEngine.LogCategory.General);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _foregroundWorkerRunning, 0);
+                if (_pendingForegroundEvent != null && Interlocked.Exchange(ref _foregroundWorkerRunning, 1) == 0)
                 {
-                    LoggingEngine.LogLine($"[AppController] Error processing foreground change: {ex.Message}",
-                        loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING,
-                        category: LoggingEngine.LogCategory.General);
+                    _ = Task.Run(ProcessForegroundQueueAsync);
                 }
-                finally
-                {
-                    _processingLock.Release();
-                }
-            });
+            }
         }
 
         private async Task ProcessForegroundChangeAsync(ForegroundChangedEventArgs e)
@@ -458,7 +473,6 @@ namespace WinBGMuter.Controller
             StopAutoPlayMonitor();
             _foregroundTracker.ForegroundChanged -= OnForegroundChanged;
             _foregroundTracker.Dispose();
-            _processingLock.Dispose();
         }
     }
 }
