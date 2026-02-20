@@ -4,6 +4,7 @@
 
 ### Recently completed
 - [x] Show window titles alongside process names in Running Apps / Never Mute / AutoPlay lists for clarity.
+- [x] Backoff native host reconnects when the main app is not running.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.

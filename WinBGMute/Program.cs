@@ -84,28 +84,30 @@ namespace WinBGMuter
             // Try to connect to the main app's coordinator
             bool connectedToCoordinator = coordinatorClient.TryConnect(2000);
             
-            if (connectedToCoordinator)
+            if (!connectedToCoordinator)
             {
-                // Forward messages from coordinator to extension (via stdout)
-                coordinatorClient.MessageReceived += (s, json) =>
-                {
-                    host.SendRawMessage(json);
-                };
-                
-                // Forward extension events to coordinator
-                host.WindowFocused += (s, e) =>
-                {
-                    coordinatorClient.SendMessage(new { type = "windowFocused", e.TabId, e.WindowId, e.Title });
-                };
-                host.BrowserLostFocus += (s, e) =>
-                {
-                    coordinatorClient.SendMessage(new { type = "browserLostFocus" });
-                };
-                host.TabStateChanged += (s, e) =>
-                {
-                    coordinatorClient.SendMessage(new { type = "mediaStateChanged", e.TabId, e.IsPlaying, e.Title });
-                };
+                return;
             }
+
+            // Forward messages from coordinator to extension (via stdout)
+            coordinatorClient.MessageReceived += (s, json) =>
+            {
+                host.SendRawMessage(json);
+            };
+            
+            // Forward extension events to coordinator
+            host.WindowFocused += (s, e) =>
+            {
+                coordinatorClient.SendMessage(new { type = "windowFocused", e.TabId, e.WindowId, e.Title });
+            };
+            host.BrowserLostFocus += (s, e) =>
+            {
+                coordinatorClient.SendMessage(new { type = "browserLostFocus" });
+            };
+            host.TabStateChanged += (s, e) =>
+            {
+                coordinatorClient.SendMessage(new { type = "mediaStateChanged", e.TabId, e.IsPlaying, e.Title });
+            };
             
             host.Start();
 

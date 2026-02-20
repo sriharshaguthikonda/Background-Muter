@@ -3,6 +3,9 @@
 
 const NATIVE_HOST_NAME = "com.backgroundmuter.tabcontrol";
 const DEBUG = true;
+const RECONNECT_BASE_MS = 2 * 60 * 1000; // 2 min
+const RECONNECT_MAX_MS = 5 * 60 * 1000; // 5 min
+const RECONNECT_JITTER_MS = 15000; // 0-15s
 
 function log(...args) {
     if (DEBUG) console.log("[BGMuter]", new Date().toLocaleTimeString(), ...args);
@@ -48,6 +51,36 @@ async function loadSettings() {
 // Native messaging port
 let nativePort = null;
 let nativeHostEnabled = true; // Set to false to run standalone without native app
+let reconnectAttempt = 0;
+let reconnectTimer = null;
+
+function resetReconnectBackoff() {
+    reconnectAttempt = 0;
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+}
+
+function scheduleReconnect(reason) {
+    if (!nativeHostEnabled) return;
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+
+    const baseDelay = RECONNECT_BASE_MS * Math.pow(2, reconnectAttempt);
+    const cappedDelay = Math.min(RECONNECT_MAX_MS, baseDelay);
+    const jitter = Math.floor(Math.random() * RECONNECT_JITTER_MS);
+    const delay = Math.min(RECONNECT_MAX_MS, cappedDelay + jitter);
+
+    reconnectAttempt = Math.min(reconnectAttempt + 1, 10);
+    log("Native host disconnected" + (reason ? ` (${reason})` : "") + `. Reconnecting in ${Math.round(delay / 1000)}s`);
+
+    reconnectTimer = setTimeout(() => {
+        connectNativeHost();
+    }, delay);
+}
 
 // Connect to native messaging host
 function connectNativeHost() {
@@ -55,9 +88,14 @@ function connectNativeHost() {
         console.log("[BGMuter] Native messaging disabled, running standalone");
         return;
     }
+
+    if (nativePort) {
+        return;
+    }
     
     try {
         nativePort = chrome.runtime.connectNative(NATIVE_HOST_NAME);
+        resetReconnectBackoff();
         
         nativePort.onMessage.addListener((message) => {
             console.log("[BGMuter] Received from native:", message);
@@ -73,9 +111,10 @@ function connectNativeHost() {
             if (error.includes("not found") || error.includes("Specified native messaging host not found")) {
                 console.log("[BGMuter] Native host not installed, running in standalone mode");
                 nativeHostEnabled = false;
+                resetReconnectBackoff();
             } else {
-                // Try to reconnect after a delay for other errors
-                setTimeout(connectNativeHost, 5000);
+                // Try to reconnect with backoff for other errors
+                scheduleReconnect(error);
             }
         });
         
