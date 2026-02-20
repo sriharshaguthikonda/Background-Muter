@@ -130,8 +130,15 @@ namespace WinBGMuter.Media
 
         private static MediaSessionKey BuildKey(GlobalSystemMediaTransportControlsSession session)
         {
-            var id = session.SourceAppUserModelId ?? Guid.NewGuid().ToString("N");
-            return new MediaSessionKey(id, session.SourceAppUserModelId);
+            var appId = session.SourceAppUserModelId;
+            if (!string.IsNullOrWhiteSpace(appId))
+            {
+                return new MediaSessionKey(appId, appId);
+            }
+
+            // Fallback for sessions without AUMID: use hash to enable lookup within this process.
+            var fallbackId = session.GetHashCode().ToString("X");
+            return new MediaSessionKey(fallbackId, null);
         }
 
         private async Task<GlobalSystemMediaTransportControlsSession?> GetSessionAsync(MediaSessionKey key, CancellationToken cancellationToken)
@@ -145,7 +152,21 @@ namespace WinBGMuter.Media
             }
 
             var sessions = _manager.GetSessions();
-            return sessions.FirstOrDefault(s => (s.SourceAppUserModelId ?? string.Empty) == key.Id);
+            if (!string.IsNullOrWhiteSpace(key.SourceAppUserModelId))
+            {
+                return sessions.FirstOrDefault(s => (s.SourceAppUserModelId ?? string.Empty) == key.SourceAppUserModelId);
+            }
+
+            var keyId = key.Id ?? string.Empty;
+            var aumidMatch = sessions.FirstOrDefault(s => (s.SourceAppUserModelId ?? string.Empty) == keyId);
+            if (aumidMatch != null)
+            {
+                return aumidMatch;
+            }
+
+            return sessions.FirstOrDefault(s =>
+                string.IsNullOrWhiteSpace(s.SourceAppUserModelId) &&
+                s.GetHashCode().ToString("X") == keyId);
         }
 
         private static MediaPlaybackState MapState(GlobalSystemMediaTransportControlsSessionPlaybackStatus? status)

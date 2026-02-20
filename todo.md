@@ -10,6 +10,7 @@
 - [x] Refresh main UI layout (spacing, sizing, readability).
 - [x] Prevent cross-window tab switches from pausing when the target window is silent.
 - [x] AutoPlay respects browser playback state so it won't resume while Edge is playing.
+- [x] Handle GSMTC sessions without AUMID so pause/resume can resolve them reliably.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
@@ -28,7 +29,6 @@
 
 ### 3) Session Handling
 - [ ] Track per-audio-session state; resume only sessions we paused.
-- [ ] Handle GSMTC sessions without AUMID so pause/resume can resolve them reliably.
 - [ ] Re-attach if a session restarts (new session ID) while app is backgrounded.
 - [ ] Handle multiple audio endpoints; remember per-endpoint rules.
 - [ ] Detect silent/inactive sessions and auto-resume if they were paused but go idle to avoid stuck state.
