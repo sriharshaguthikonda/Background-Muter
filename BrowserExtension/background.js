@@ -308,6 +308,13 @@ async function pauseAllTabsExcept(exceptTabId) {
 
 // Listen for messages from content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'settingsChanged') {
+        settings = { ...settings, ...message.settings };
+        log("Settings updated from options page:", settings);
+        sendResponse({ success: true });
+        return true;
+    }
+
     if (!sender.tab) {
         log("Message from non-tab context:", message);
         return;
@@ -578,16 +585,6 @@ async function initializeActiveTab() {
         log("!!! Error initializing active tab:", e.message);
     }
 }
-
-// Listen for settings changes from options page
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'settingsChanged') {
-        settings = { ...settings, ...message.settings };
-        log("Settings updated from options page:", settings);
-        sendResponse({ success: true });
-        return true;
-    }
-});
 
 // Listen for storage changes (in case settings changed from another context)
 chrome.storage.onChanged.addListener((changes, areaName) => {

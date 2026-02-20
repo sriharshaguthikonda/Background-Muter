@@ -12,6 +12,7 @@
 - [x] AutoPlay respects browser playback state so it won't resume while Edge is playing.
 - [x] Prevent AutoPlay timer reentrancy to avoid overlapping play/pause calls.
 - [x] Aggregate per-frame media state per tab (all_frames) to prevent false "not playing".
+- [x] Avoid duplicate runtime onMessage responders to prevent double replies.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
@@ -52,4 +53,3 @@
 - [ ] Document privacy note if logs/telemetry are collected (telemetry off by default).
 
 ### 7) Browser Extension
-- [ ] Avoid duplicate runtime onMessage responders to prevent double replies.
