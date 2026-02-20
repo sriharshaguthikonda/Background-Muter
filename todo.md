@@ -10,6 +10,7 @@
 - [x] Refresh main UI layout (spacing, sizing, readability).
 - [x] Prevent cross-window tab switches from pausing when the target window is silent.
 - [x] AutoPlay respects browser playback state so it won't resume while Edge is playing.
+- [x] Coalesce foreground-change events so cooldown waits don't apply stale window data.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
@@ -21,7 +22,6 @@
 ### 2) Pause Logic
 - [ ] Core: pause media sessions when window loses focus; resume on regain.
 - [ ] Debounce: add grace period to avoid rapid pause/resume during quick Alt+Tab.
-- [ ] Coalesce foreground-change events so cooldown waits don't apply stale window data.
 - [ ] Optional “reduce volume instead of pause” mode (only if harmless to sessions).
 - [ ] Smart exclusions: never pause comms apps by default; user can override.
 - [ ] Respect windowed fullscreen/games that misbehave—option to ignore specific titles.
