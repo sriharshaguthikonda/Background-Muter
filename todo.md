@@ -14,6 +14,7 @@
 - [x] Aggregate per-frame media state per tab (all_frames) to prevent false "not playing".
 - [x] Avoid duplicate runtime onMessage responders to prevent double replies.
 - [x] Coalesce foreground-change events so cooldown waits don't apply stale window data.
+- [x] Handle GSMTC sessions without AUMID so pause/resume can resolve them reliably.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
@@ -31,7 +32,6 @@
 
 ### 3) Session Handling
 - [ ] Track per-audio-session state; resume only sessions we paused.
-- [ ] Handle GSMTC sessions without AUMID so pause/resume can resolve them reliably.
 - [ ] Re-attach if a session restarts (new session ID) while app is backgrounded.
 - [ ] Handle multiple audio endpoints; remember per-endpoint rules.
 - [ ] Detect silent/inactive sessions and auto-resume if they were paused but go idle to avoid stuck state.
