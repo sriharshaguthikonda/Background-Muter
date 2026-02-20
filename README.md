@@ -79,7 +79,7 @@ flowchart LR
 # Extension Settings (Options page)
 Open extension options (right-click icon → Options):
 * **Pause on tab switch** – pause previous tab in the same window  
-* **Pause on window switch** – pause previous window’s active tab  
+* **Pause on window switch** – pause previous window’s active tab only if the newly focused window has playing media  
 * **Auto-play on window focus** – resume if the tab was paused by the extension
 
 # Testing (cross-profile)
