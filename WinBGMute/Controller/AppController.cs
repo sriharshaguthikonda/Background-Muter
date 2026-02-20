@@ -29,6 +29,7 @@ namespace WinBGMuter.Controller
         private string _autoPlayAppName = "Spotify";
         private System.Timers.Timer? _autoPlayMonitorTimer;
         private bool _autoPlayAppPausedByUs = false;
+        private int _autoPlayTickInProgress = 0;
 
         private Func<IEnumerable<string>>? _getNeverPauseList;
         private int _pauseCooldownMs = 7000;
@@ -152,6 +153,11 @@ namespace WinBGMuter.Controller
                 return;
             }
 
+            if (Interlocked.Exchange(ref _autoPlayTickInProgress, 1) == 1)
+            {
+                return;
+            }
+
             try
             {
                 var sessions = await _mediaController.ListSessionsAsync().ConfigureAwait(false);
@@ -214,6 +220,10 @@ namespace WinBGMuter.Controller
                 LoggingEngine.LogLine($"[AutoPlay] Monitor error: {ex.Message}",
                     category: LoggingEngine.LogCategory.MediaControl,
                     loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _autoPlayTickInProgress, 0);
             }
         }
 
