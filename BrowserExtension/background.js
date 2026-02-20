@@ -17,18 +17,27 @@ function logState() {
     log("  lastActiveWindowId:", lastActiveWindowId);
     log("  tabMediaState size:", tabMediaState.size);
     tabMediaState.forEach((state, tabId) => {
-        log(`    Tab ${tabId}: playing=${state.playing}, title="${state.title}"`);
+        log(`    Tab ${tabId}: window=${state.windowId}, playing=${state.playing}, title="${state.title}"`);
     });
     log("=============");
 }
 
 // Track tabs with active media
-const tabMediaState = new Map(); // tabId -> { playing: bool, title: string, url: string, pausedByExtension: bool }
+const tabMediaState = new Map(); // tabId -> { playing: bool, title: string, url: string, windowId: number, pausedByExtension: bool }
 
 // Track the last active tab that was playing
 let lastPlayingTabId = null;
 let lastActiveTabId = null;
 let lastActiveWindowId = null;
+
+function isWindowPlaying(windowId) {
+    for (const state of tabMediaState.values()) {
+        if (state.windowId === windowId && state.playing) {
+            return true;
+        }
+    }
+    return false;
+}
 
 // Settings (loaded from storage)
 let settings = {
@@ -259,7 +268,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             tabMediaState.set(tabId, {
                 playing: message.playing,
                 title: sender.tab.title || "",
-                url: sender.tab.url || ""
+                url: sender.tab.url || "",
+                windowId: sender.tab.windowId,
+                pausedByExtension: oldState?.pausedByExtension || false
             });
             
             log("*** MEDIA STATE CHANGED ***");
@@ -287,7 +298,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 tabMediaState.set(tabId, {
                     playing: false,
                     title: sender.tab.title || "",
-                    url: sender.tab.url || ""
+                    url: sender.tab.url || "",
+                    windowId: sender.tab.windowId,
+                    pausedByExtension: false
                 });
             }
             break;
@@ -336,6 +349,15 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
             log("  >>> Tab pause DISABLED in settings, skipping");
         } else {
             log("  >>> Same tab or no previous tab, skipping pause logic");
+        }
+
+        // Ensure the tab's window association stays current
+        const currentState = tabMediaState.get(activeInfo.tabId);
+        if (currentState) {
+            currentState.windowId = activeInfo.windowId;
+            currentState.title = tab.title || currentState.title;
+            currentState.url = tab.url || currentState.url;
+            tabMediaState.set(activeInfo.tabId, currentState);
         }
         
         // Update tracking
@@ -402,14 +424,17 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
             const isWindowSwitch = lastActiveWindowId !== windowId;
             const isTabSwitch = lastActiveTabId !== tab.id;
             log("  isWindowSwitch:", isWindowSwitch, "isTabSwitch:", isTabSwitch);
+            const targetWindowHasPlaying = isWindowPlaying(windowId);
+            log("  Target window has playing media:", targetWindowHasPlaying);
             
             // PAUSE previous window's tab if setting enabled and we switched windows
             if (settings.pauseOnWindowSwitch && isWindowSwitch && lastActiveTabId !== null && lastActiveTabId !== tab.id) {
                 const prevState = tabMediaState.get(lastActiveTabId);
                 log("  Previous tab state:", prevState ? JSON.stringify(prevState) : "NOT TRACKED");
-                
-                // Try to pause if playing OR if not tracked (might still have media)
-                if (prevState && prevState.playing) {
+
+                if (!targetWindowHasPlaying) {
+                    log("  >>> Target window has no playing media, keeping previous window playing");
+                } else if (prevState && prevState.playing) {
                     log("  >>> WILL PAUSE previous window's tab:", lastActiveTabId, "-", prevState.title);
                     await pauseTab(lastActiveTabId);
                 } else if (!prevState) {

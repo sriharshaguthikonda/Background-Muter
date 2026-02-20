@@ -119,10 +119,12 @@ namespace WinBGMuter
             // 
             panel1.Controls.Add(tableLayoutPanel1);
             panel1.Controls.Add(statusStrip1);
+            panel1.BackColor = Color.FromArgb(246, 247, 249);
             panel1.Dock = DockStyle.Fill;
             panel1.Location = new Point(0, 0);
             panel1.Margin = new Padding(3, 4, 3, 4);
             panel1.Name = "panel1";
+            panel1.Padding = new Padding(10);
             panel1.Size = new Size(627, 419);
             panel1.TabIndex = 0;
             // 
@@ -132,10 +134,12 @@ namespace WinBGMuter
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tableLayoutPanel1.Controls.Add(LogTextBox, 0, 1);
             tableLayoutPanel1.Controls.Add(TopTableLayout, 0, 0);
+            tableLayoutPanel1.BackColor = Color.FromArgb(246, 247, 249);
             tableLayoutPanel1.Dock = DockStyle.Fill;
             tableLayoutPanel1.Location = new Point(0, 0);
             tableLayoutPanel1.Margin = new Padding(3, 4, 3, 4);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.Padding = new Padding(6, 6, 6, 2);
             tableLayoutPanel1.RowCount = 2;
             tableLayoutPanel1.RowStyles.Add(new RowStyle());
             tableLayoutPanel1.RowStyles.Add(new RowStyle());
@@ -145,14 +149,16 @@ namespace WinBGMuter
             // 
             // LogTextBox
             // 
-            LogTextBox.BorderStyle = BorderStyle.None;
+            LogTextBox.BackColor = Color.White;
+            LogTextBox.BorderStyle = BorderStyle.FixedSingle;
             LogTextBox.Dock = DockStyle.Fill;
-            LogTextBox.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point);
-            LogTextBox.Location = new Point(3, 328);
+            LogTextBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            LogTextBox.Location = new Point(9, 326);
             LogTextBox.Margin = new Padding(3, 4, 3, 4);
             LogTextBox.Name = "LogTextBox";
+            LogTextBox.ReadOnly = true;
             LogTextBox.ScrollBars = RichTextBoxScrollBars.Vertical;
-            LogTextBox.Size = new Size(621, 79);
+            LogTextBox.Size = new Size(609, 81);
             LogTextBox.TabIndex = 0;
             LogTextBox.Text = "";
             // 
@@ -166,23 +172,25 @@ namespace WinBGMuter
             TopTableLayout.Controls.Add(groupBox2, 1, 0);
             TopTableLayout.Controls.Add(groupBox3, 2, 0);
             TopTableLayout.Dock = DockStyle.Fill;
-            TopTableLayout.Location = new Point(3, 4);
+            TopTableLayout.Location = new Point(9, 10);
             TopTableLayout.Margin = new Padding(3, 4, 3, 4);
             TopTableLayout.Name = "TopTableLayout";
+            TopTableLayout.Padding = new Padding(4);
             TopTableLayout.RowCount = 1;
             TopTableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            TopTableLayout.Size = new Size(621, 316);
+            TopTableLayout.Size = new Size(609, 308);
             TopTableLayout.TabIndex = 1;
             // 
             // groupBox1
             // 
+            groupBox1.BackColor = Color.White;
             groupBox1.Controls.Add(tableLayoutPanel3);
             groupBox1.Dock = DockStyle.Fill;
-            groupBox1.Location = new Point(3, 4);
+            groupBox1.Location = new Point(7, 8);
             groupBox1.Margin = new Padding(3, 4, 3, 4);
             groupBox1.Name = "groupBox1";
-            groupBox1.Padding = new Padding(3, 4, 3, 4);
-            groupBox1.Size = new Size(140, 308);
+            groupBox1.Padding = new Padding(8, 10, 8, 8);
+            groupBox1.Size = new Size(135, 292);
             groupBox1.TabIndex = 0;
             groupBox1.TabStop = false;
             groupBox1.Text = "Control";
@@ -237,6 +245,7 @@ namespace WinBGMuter
             // NeverMuteTextBox
             // 
             NeverMuteTextBox.DataBindings.Add(new Binding("Text", settingsBindingSource, "NeverMuteProcs", true));
+            NeverMuteTextBox.BorderStyle = BorderStyle.FixedSingle;
             NeverMuteTextBox.Dock = DockStyle.Fill;
             NeverMuteTextBox.Location = new Point(3, 37);
             NeverMuteTextBox.Margin = new Padding(3, 4, 3, 4);
@@ -275,13 +284,14 @@ namespace WinBGMuter
             // 
             // groupBox2
             // 
+            groupBox2.BackColor = Color.White;
             groupBox2.Controls.Add(tableLayoutPanel4);
             groupBox2.Dock = DockStyle.Fill;
-            groupBox2.Location = new Point(149, 4);
+            groupBox2.Location = new Point(148, 8);
             groupBox2.Margin = new Padding(3, 4, 3, 4);
             groupBox2.Name = "groupBox2";
-            groupBox2.Padding = new Padding(3, 4, 3, 4);
-            groupBox2.Size = new Size(306, 308);
+            groupBox2.Padding = new Padding(8, 10, 8, 8);
+            groupBox2.Size = new Size(298, 292);
             groupBox2.TabIndex = 1;
             groupBox2.TabStop = false;
             groupBox2.Text = "Mute Exception Changer";
@@ -296,13 +306,14 @@ namespace WinBGMuter
             tableLayoutPanel4.Controls.Add(tableLayoutPanel6, 0, 0);
             tableLayoutPanel4.Controls.Add(tableLayoutPanel7, 2, 0);
             tableLayoutPanel4.Dock = DockStyle.Fill;
-            tableLayoutPanel4.Location = new Point(3, 24);
+            tableLayoutPanel4.Location = new Point(8, 30);
             tableLayoutPanel4.Margin = new Padding(3, 4, 3, 4);
             tableLayoutPanel4.Name = "tableLayoutPanel4";
+            tableLayoutPanel4.Padding = new Padding(4);
             tableLayoutPanel4.RowCount = 1;
             tableLayoutPanel4.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             tableLayoutPanel4.RowStyles.Add(new RowStyle(SizeType.Absolute, 273F));
-            tableLayoutPanel4.Size = new Size(300, 280);
+            tableLayoutPanel4.Size = new Size(282, 254);
             tableLayoutPanel4.TabIndex = 0;
             // 
             // tableLayoutPanel2
@@ -367,8 +378,10 @@ namespace WinBGMuter
             // 
             // ProcessListListBox
             // 
+            ProcessListListBox.BorderStyle = BorderStyle.FixedSingle;
             ProcessListListBox.Dock = DockStyle.Fill;
             ProcessListListBox.FormattingEnabled = true;
+            ProcessListListBox.IntegralHeight = false;
             ProcessListListBox.ItemHeight = 20;
             ProcessListListBox.Location = new Point(3, 25);
             ProcessListListBox.Margin = new Padding(3, 4, 3, 4);
@@ -403,8 +416,10 @@ namespace WinBGMuter
             // 
             // NeverMuteListBox
             // 
+            NeverMuteListBox.BorderStyle = BorderStyle.FixedSingle;
             NeverMuteListBox.Dock = DockStyle.Fill;
             NeverMuteListBox.FormattingEnabled = true;
+            NeverMuteListBox.IntegralHeight = false;
             NeverMuteListBox.ItemHeight = 20;
             NeverMuteListBox.Location = new Point(3, 26);
             NeverMuteListBox.Margin = new Padding(3, 4, 3, 4);
@@ -424,13 +439,14 @@ namespace WinBGMuter
             // 
             // groupBox3
             // 
+            groupBox3.BackColor = Color.White;
             groupBox3.Controls.Add(tableLayoutPanel5);
             groupBox3.Dock = DockStyle.Fill;
-            groupBox3.Location = new Point(461, 4);
+            groupBox3.Location = new Point(452, 8);
             groupBox3.Margin = new Padding(3, 4, 3, 4);
             groupBox3.Name = "groupBox3";
-            groupBox3.Padding = new Padding(3, 4, 3, 4);
-            groupBox3.Size = new Size(157, 308);
+            groupBox3.Padding = new Padding(8, 10, 8, 8);
+            groupBox3.Size = new Size(150, 292);
             groupBox3.TabIndex = 2;
             groupBox3.TabStop = false;
             groupBox3.Text = "🛠Settings";
@@ -448,9 +464,10 @@ namespace WinBGMuter
             tableLayoutPanel5.Controls.Add(MuteConditionGroupBox, 0, 6);
             tableLayoutPanel5.Controls.Add(AdvancedButton, 0, 7);
             tableLayoutPanel5.Dock = DockStyle.Fill;
-            tableLayoutPanel5.Location = new Point(3, 24);
+            tableLayoutPanel5.Location = new Point(8, 30);
             tableLayoutPanel5.Margin = new Padding(3, 4, 3, 4);
             tableLayoutPanel5.Name = "tableLayoutPanel5";
+            tableLayoutPanel5.Padding = new Padding(2);
             tableLayoutPanel5.RowCount = 8;
             tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -685,12 +702,16 @@ namespace WinBGMuter
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(627, 419);
+            BackColor = Color.FromArgb(246, 247, 249);
+            ClientSize = new Size(900, 560);
             Controls.Add(panel1);
+            Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
             HelpButton = true;
             Icon = (Icon)resources.GetObject("$this.Icon");
             Margin = new Padding(3, 4, 3, 4);
+            MinimumSize = new Size(860, 520);
             Name = "MainForm";
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "Background Muter (GUI)";
             FormClosing += MainForm_FormClosing;
             FormClosed += MainForm_FormClosed;
