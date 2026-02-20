@@ -22,6 +22,7 @@ You can add exceptions for which applications are never muted.
 * Debounced foreground detection to reduce rapid mute/unmute flicker during fast app switching
 * **Per-tab media control for browsers via extension + native messaging (multi-profile aware)**
 * Auto-play respects active browser playback (e.g., Edge tabs) to avoid resuming while a browser is playing
+* Auto-play monitor guards against overlapping ticks to prevent rapid play/pause bursts
 
 # Requirements
 * .NET 8.0 (https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
