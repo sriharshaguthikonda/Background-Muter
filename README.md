@@ -18,6 +18,7 @@ You can add exceptions for which applications are never muted.
 * Add exceptions for applications to never be muted
 * Minimize to tray icon
 * Dark Mode
+* Refreshed desktop UI layout for improved spacing and readability
 * Debounced foreground detection to reduce rapid mute/unmute flicker during fast app switching
 * **Per-tab media control for browsers via extension + native messaging (multi-profile aware)**
 

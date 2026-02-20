@@ -7,6 +7,7 @@
 - [x] Pause previous window only when the newly focused window has playing media.
 - [x] Fix native messaging host framing to avoid partial reads and stdin contention.
 - [x] Backoff native host reconnects when the main app is not running.
+- [x] Refresh main UI layout (spacing, sizing, readability).
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
