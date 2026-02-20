@@ -25,6 +25,7 @@ You can add exceptions for which applications are never muted.
 * Browser extension aggregates per-frame media state to avoid false "not playing"
 * Extension settings messages are handled in a single listener to avoid duplicate replies
 * GSMTC session control falls back when AUMID is missing to keep pause/resume working
+* Policy evaluation resolves process names per PID for accurate include/exclude behavior
 * Auto-play respects active browser playback (e.g., Edge tabs) to avoid resuming while a browser is playing
 * Auto-play monitor guards against overlapping ticks to prevent rapid play/pause bursts
 

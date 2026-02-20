@@ -34,7 +34,7 @@ namespace WinBGMuter.Policy
                     continue;
                 }
 
-                if (!ShouldActOn(pid, foregroundProcessName))
+                if (!ShouldActOn(pid, null))
                 {
                     continue;
                 }

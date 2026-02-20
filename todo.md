@@ -15,6 +15,7 @@
 - [x] Avoid duplicate runtime onMessage responders to prevent double replies.
 - [x] Coalesce foreground-change events so cooldown waits don't apply stale window data.
 - [x] Handle GSMTC sessions without AUMID so pause/resume can resolve them reliably.
+- [x] Policy evaluation resolves process names per PID for accurate include/exclude behavior.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
