@@ -10,6 +10,7 @@
 - [x] Refresh main UI layout (spacing, sizing, readability).
 - [x] Prevent cross-window tab switches from pausing when the target window is silent.
 - [x] AutoPlay respects browser playback state so it won't resume while Edge is playing.
+- [x] Policy evaluation resolves process names per PID for accurate include/exclude behavior.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
