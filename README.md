@@ -21,6 +21,7 @@ You can add exceptions for which applications are never muted.
 * Refreshed desktop UI layout for improved spacing and readability
 * Debounced foreground detection to reduce rapid mute/unmute flicker during fast app switching
 * **Per-tab media control for browsers via extension + native messaging (multi-profile aware)**
+* Browser extension aggregates per-frame media state to avoid false "not playing"
 * Auto-play respects active browser playback (e.g., Edge tabs) to avoid resuming while a browser is playing
 
 # Requirements
