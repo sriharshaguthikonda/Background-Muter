@@ -10,6 +10,7 @@
 - [x] Refresh main UI layout (spacing, sizing, readability).
 - [x] Prevent cross-window tab switches from pausing when the target window is silent.
 - [x] AutoPlay respects browser playback state so it won't resume while Edge is playing.
+- [x] Release COM audio session objects on VolumeMixer reload to avoid leaks.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
@@ -36,7 +37,6 @@
 ### 4) Reliability & Performance
 - [ ] Lightweight foreground detection + audio polling to minimize CPU.
 - [ ] Prevent AutoPlay timer reentrancy to avoid overlapping play/pause calls.
-- [ ] Release COM audio session objects on VolumeMixer reload to avoid leaks.
 - [ ] Add structured logging for pause/resume decisions; expose log location to users.
 - [ ] Fallback: if pausing fails, surface a user-visible notification/toast.
 - [ ] Optional “snooze pausing for N minutes” timer.

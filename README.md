@@ -20,6 +20,7 @@ You can add exceptions for which applications are never muted.
 * Dark Mode
 * Refreshed desktop UI layout for improved spacing and readability
 * Debounced foreground detection to reduce rapid mute/unmute flicker during fast app switching
+* Volume mixer releases audio session COM objects on reload to avoid leaks
 * **Per-tab media control for browsers via extension + native messaging (multi-profile aware)**
 * Auto-play respects active browser playback (e.g., Edge tabs) to avoid resuming while a browser is playing
 
