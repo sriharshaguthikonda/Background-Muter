@@ -435,3 +435,4 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/csharp,dotnetcore,windows
 /build.cmd
 /build_and_run.cmd
+build_output/
