@@ -55,6 +55,7 @@
 - [ ] Add structured logging for pause/resume decisions; expose log location to users.
 - [ ] Fallback: if pausing fails, surface a user-visible notification/toast.
 - [ ] Optional “snooze pausing for N minutes” timer.
+- [ ] Replace coordinator IPC with localhost TCP for reliability.
 
 ### 5) Config & Persistence
 - [ ] Persist settings per user; include export/import of pause rules and exceptions.

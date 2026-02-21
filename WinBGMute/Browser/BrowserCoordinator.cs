@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.IO.Pipes;
-using System.Security.AccessControl;
-using System.Security.Principal;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -13,64 +12,52 @@ namespace WinBGMuter.Browser
 {
     /// <summary>
     /// Coordinates browser media control across multiple extension instances (profiles).
-    /// Runs as a named pipe server in the main app.
+    /// Runs as a localhost TCP server in the main app.
     /// </summary>
     internal sealed class BrowserCoordinator : IDisposable
     {
-        private const string PipeName = "BackgroundMuter_BrowserCoordinator";
+        private const int CoordinatorPort = 32145;
         private readonly CancellationTokenSource _cts = new();
         private readonly ConcurrentDictionary<string, ConnectedExtension> _extensions = new();
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, bool>> _extensionTabStates = new();
         private Task? _serverTask;
+        private TcpListener? _listener;
         private bool _disposed;
 
         public event EventHandler<BrowserFocusChangedEventArgs>? BrowserFocusChanged;
         public bool IsAnyTabPlaying => HasAnyPlayingTab();
 
         /// <summary>
-        /// Start the named pipe server to accept extension connections.
+        /// Start the localhost TCP server to accept extension connections.
         /// </summary>
         public void Start()
         {
             if (_serverTask != null) return;
             _serverTask = Task.Run(RunServerAsync);
-            LoggingEngine.LogLine("[BrowserCoordinator] Started pipe server",
+            LoggingEngine.LogLine($"[BrowserCoordinator] Started TCP server on 127.0.0.1:{CoordinatorPort}",
                 category: LoggingEngine.LogCategory.MediaControl);
         }
 
         public void Stop()
         {
             _cts.Cancel();
+            _listener?.Stop();
             _serverTask?.Wait(2000);
         }
 
         private async Task RunServerAsync()
         {
+            _listener = new TcpListener(IPAddress.Loopback, CoordinatorPort);
+            _listener.Start();
+
             while (!_cts.Token.IsCancellationRequested)
             {
                 try
                 {
-                    var pipe = new NamedPipeServerStream(
-                        PipeName,
-                        PipeDirection.InOut,
-                        NamedPipeServerStream.MaxAllowedServerInstances,
-                        PipeTransmissionMode.Byte,
-                        PipeOptions.Asynchronous);
-                    try
-                    {
-                        pipe.SetAccessControl(CreatePipeSecurity());
-                    }
-                    catch (Exception ex)
-                    {
-                        LoggingEngine.LogLine($"[BrowserCoordinator] Failed to set pipe ACLs: {ex.Message}",
-                            category: LoggingEngine.LogCategory.MediaControl,
-                            loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
-                    }
-
-                    await pipe.WaitForConnectionAsync(_cts.Token);
+                    var client = await _listener.AcceptTcpClientAsync(_cts.Token);
                     
                     var extensionId = Guid.NewGuid().ToString();
-                    var extension = new ConnectedExtension(extensionId, pipe, this);
+                    var extension = new ConnectedExtension(extensionId, client, this);
                     _extensions.TryAdd(extensionId, extension);
                     _extensionTabStates.TryAdd(extensionId, new ConcurrentDictionary<int, bool>());
                     
@@ -98,23 +85,6 @@ namespace WinBGMuter.Browser
                     }
                 }
             }
-        }
-
-        private static PipeSecurity CreatePipeSecurity()
-        {
-            var pipeSecurity = new PipeSecurity();
-            var authenticatedUsers = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
-            var currentUser = WindowsIdentity.GetCurrent().User;
-            var localSystem = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
-
-            pipeSecurity.AddAccessRule(new PipeAccessRule(authenticatedUsers, PipeAccessRights.ReadWrite, AccessControlType.Allow));
-            if (currentUser != null)
-            {
-                pipeSecurity.AddAccessRule(new PipeAccessRule(currentUser, PipeAccessRights.FullControl, AccessControlType.Allow));
-            }
-            pipeSecurity.AddAccessRule(new PipeAccessRule(localSystem, PipeAccessRights.FullControl, AccessControlType.Allow));
-
-            return pipeSecurity;
         }
 
         /// <summary>
@@ -339,26 +309,27 @@ namespace WinBGMuter.Browser
         private sealed class ConnectedExtension : IDisposable
         {
             private readonly string _id;
-            private readonly NamedPipeServerStream _pipe;
+            private readonly TcpClient _client;
             private readonly BrowserCoordinator _coordinator;
             private readonly StreamReader _reader;
             private readonly StreamWriter _writer;
             private readonly SemaphoreSlim _writeLock = new(1, 1);
 
-            public ConnectedExtension(string id, NamedPipeServerStream pipe, BrowserCoordinator coordinator)
+            public ConnectedExtension(string id, TcpClient client, BrowserCoordinator coordinator)
             {
                 _id = id;
-                _pipe = pipe;
+                _client = client;
                 _coordinator = coordinator;
-                _reader = new StreamReader(pipe, Encoding.UTF8);
-                _writer = new StreamWriter(pipe, Encoding.UTF8) { AutoFlush = true };
+                var stream = client.GetStream();
+                _reader = new StreamReader(stream, Encoding.UTF8);
+                _writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
             }
 
             public async Task StartAsync(CancellationToken ct)
             {
                 try
                 {
-                    while (!ct.IsCancellationRequested && _pipe.IsConnected)
+                    while (!ct.IsCancellationRequested && _client.Connected)
                     {
                         var line = await _reader.ReadLineAsync();
                         if (line == null) break;
@@ -384,7 +355,7 @@ namespace WinBGMuter.Browser
                 _writeLock.Wait();
                 try
                 {
-                    if (_pipe.IsConnected)
+                    if (_client.Connected)
                     {
                         _writer.WriteLine(message);
                     }
@@ -399,7 +370,7 @@ namespace WinBGMuter.Browser
             {
                 _reader.Dispose();
                 _writer.Dispose();
-                _pipe.Dispose();
+                _client.Close();
                 _writeLock.Dispose();
             }
         }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
-using System.IO.Pipes;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -14,8 +15,8 @@ namespace WinBGMuter.Browser
     /// </summary>
     internal sealed class BrowserCoordinatorClient : IDisposable
     {
-        private const string PipeName = "BackgroundMuter_BrowserCoordinator";
-        private NamedPipeClientStream? _pipe;
+        private const int CoordinatorPort = 32145;
+        private TcpClient? _client;
         private StreamReader? _reader;
         private StreamWriter? _writer;
         private readonly CancellationTokenSource _cts = new();
@@ -25,21 +26,26 @@ namespace WinBGMuter.Browser
         public event EventHandler<string>? MessageReceived;
         public event EventHandler? Disconnected;
 
-        public bool IsConnected => _pipe?.IsConnected ?? false;
+        public bool IsConnected => _client?.Connected ?? false;
 
         public bool TryConnect(int timeoutMs = 5000)
         {
             try
             {
-                _pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-                _pipe.Connect(timeoutMs);
-                
-                _reader = new StreamReader(_pipe, Encoding.UTF8);
-                _writer = new StreamWriter(_pipe, Encoding.UTF8) { AutoFlush = true };
+                _client = new TcpClient();
+                var connectTask = _client.ConnectAsync(IPAddress.Loopback, CoordinatorPort);
+                if (!connectTask.Wait(timeoutMs))
+                {
+                    throw new TimeoutException();
+                }
+
+                var stream = _client.GetStream();
+                _reader = new StreamReader(stream, Encoding.UTF8);
+                _writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
                 
                 _readTask = Task.Run(ReadMessagesAsync);
                 
-                LoggingEngine.LogLine("[CoordinatorClient] Connected to main app",
+                LoggingEngine.LogLine("[CoordinatorClient] Connected to main app (TCP)",
                     category: LoggingEngine.LogCategory.MediaControl);
                 return true;
             }
@@ -63,7 +69,7 @@ namespace WinBGMuter.Browser
         {
             try
             {
-                while (!_cts.Token.IsCancellationRequested && _pipe?.IsConnected == true)
+                while (!_cts.Token.IsCancellationRequested && _client?.Connected == true)
                 {
                     var line = await _reader!.ReadLineAsync();
                     if (line == null) break;
@@ -85,7 +91,7 @@ namespace WinBGMuter.Browser
 
         public void SendMessage(object message)
         {
-            if (_pipe?.IsConnected != true || _writer == null) return;
+            if (_client?.Connected != true || _writer == null) return;
             
             try
             {
@@ -108,7 +114,7 @@ namespace WinBGMuter.Browser
             _cts.Cancel();
             _reader?.Dispose();
             _writer?.Dispose();
-            _pipe?.Dispose();
+            _client?.Close();
         }
     }
 }

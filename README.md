@@ -54,7 +54,7 @@ flowchart LR
     end
     subgraph Main_App
         C1[WinBGMuter GUI]
-        C2[BrowserCoordinator\n(named pipe server)]
+        C2[BrowserCoordinator\n(localhost TCP server)]
     end
 
     A1 <--> NA
@@ -105,7 +105,7 @@ Open extension options (right-click icon → Options):
    * App log: `%LOCALAPPDATA%\Background Muter\Logs\bgmuter-YYYY-MM-DD.log`.
 
 # Troubleshooting
-* If it doesn’t pause when switching profiles: ensure native host is installed **in each profile** and BrowserCoordinator is running (main app open).
+* If it doesn’t pause when switching profiles: ensure native host is installed **in each profile** and BrowserCoordinator is running (main app open, TCP 127.0.0.1:32145).
 * If the main app is closed, the extension will retry the native host with backoff (up to about 5 minutes), so you may see occasional host spawns.
 * If build fails due to locked exe: close running `WinBGMuter.exe` and rebuild.
 * To wipe stale registry entries for native host, rerun the install script with correct ExtensionId.
