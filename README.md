@@ -32,6 +32,7 @@ You can add exceptions for which applications are never muted.
 * Browser focus-loss pausing follows the Pause on tab switch setting
 * Extension settings fall back to local storage when sync is unavailable
 * Pause control is centralized: the extension only tracks media and obeys the coordinator commands
+* App writes a daily log file for troubleshooting
 
 # Requirements
 * .NET 8.0 (https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
@@ -100,7 +101,7 @@ Open extension options (right-click icon → Options):
 3. Focus back Profile A → Profile A may auto-play active tab (if enabled), Profile B stays paused.
 4. Watch logs:
    * Service worker console in each profile (`edge://extensions/` → “service worker”).
-   * App log: `WinBGMuter\Logs\` or the in-app console.
+   * App log: `%LOCALAPPDATA%\Background Muter\Logs\bgmuter-YYYY-MM-DD.log`.
 
 # Troubleshooting
 * If it doesn’t pause when switching profiles: ensure native host is installed **in each profile** and BrowserCoordinator is running (main app open).
@@ -108,6 +109,7 @@ Open extension options (right-click icon → Options):
 * If build fails due to locked exe: close running `WinBGMuter.exe` and rebuild.
 * To wipe stale registry entries for native host, rerun the install script with correct ExtensionId.
 * Developer note: native messaging uses length-prefixed stdin/stdout; avoid any other reads from stdin in the host process.
+* Logs are stored at `%LOCALAPPDATA%\Background Muter\Logs\bgmuter-YYYY-MM-DD.log`.
 
 # Existing UI (classic)
 * Run **WinBGMuter.exe**. The application will automatically start muting background processes with default settings.
