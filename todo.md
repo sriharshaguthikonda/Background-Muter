@@ -19,6 +19,7 @@
 - [x] Release COM audio session objects on VolumeMixer reload to avoid leaks.
 - [x] Tie browser focus-loss pausing to the Pause on tab switch setting.
 - [x] Persist extension settings in both sync and local storage for reliability.
+- [x] Enforce pause-on-tab and pause-on-window ON while the extension is enabled.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
