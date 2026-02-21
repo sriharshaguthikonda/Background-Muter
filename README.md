@@ -31,7 +31,7 @@ You can add exceptions for which applications are never muted.
 * Auto-play monitor guards against overlapping ticks to prevent rapid play/pause bursts
 * Browser focus-loss pausing follows the Pause on tab switch setting
 * Extension settings fall back to local storage when sync is unavailable
-* Pause-on-window is enforced ON while the extension is enabled; pause-on-tab is disabled (options are locked)
+* Pause control is centralized: the extension only tracks media and obeys the coordinator commands
 
 # Requirements
 * .NET 8.0 (https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
@@ -90,10 +90,9 @@ flowchart LR
 
 # Extension Settings (Options page)
 Open extension options (right-click icon → Options):
-* **Pause on tab switch** – currently disabled (window-switch is the active mode)  
-* **Pause on window switch** – pause previous window’s active tab only if the newly focused window has playing media  
-* **Auto-play on window focus** – resume if the tab was paused by the extension
-* Pause-on-window is always ON while the extension is enabled; pause-on-tab is locked OFF
+* **Pause on tab switch** – managed centrally (local pause logic disabled)  
+* **Pause on window switch** – managed centrally (local pause logic disabled)  
+* **Auto-play on window focus** – managed centrally (local auto-play disabled)
 
 # Testing (cross-profile)
 1. In Profile A, play a YouTube video (Window A).

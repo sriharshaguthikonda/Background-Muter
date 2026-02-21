@@ -70,9 +70,6 @@ function scheduleFocusLossPause() {
         }
 
         log("BROWSER LOST FOCUS (confirmed)");
-        if (settings.pauseOnWindowSwitch) {
-            pauseAllTabs().catch(() => {});
-        }
         if (nativePort) {
             nativePort.postMessage({ type: "browserLostFocus" });
         }
@@ -101,27 +98,30 @@ async function tryGetTabState(tabId) {
 let settings = {
     pauseOnTabSwitch: false,
     pauseOnWindowSwitch: true,
-    autoPlayOnWindowFocus: true
+    autoPlayOnWindowFocus: false
 };
 
 function enforcePauseSettings(reason) {
-    if (settings.pauseOnWindowSwitch && settings.pauseOnTabSwitch === false) {
+    if (settings.pauseOnWindowSwitch && settings.pauseOnTabSwitch === false && settings.autoPlayOnWindowFocus === false) {
         return;
     }
 
     settings.pauseOnWindowSwitch = true;
     settings.pauseOnTabSwitch = false;
+    settings.autoPlayOnWindowFocus = false;
 
     chrome.storage.sync.set({
         pauseOnTabSwitch: false,
-        pauseOnWindowSwitch: true
+        pauseOnWindowSwitch: true,
+        autoPlayOnWindowFocus: false
     });
     chrome.storage.local.set({
         pauseOnTabSwitch: false,
-        pauseOnWindowSwitch: true
+        pauseOnWindowSwitch: true,
+        autoPlayOnWindowFocus: false
     });
 
-    log("Settings forced: pauseOnWindowSwitch=ON, pauseOnTabSwitch=OFF" + (reason ? ` (${reason})` : ""));
+    log("Settings forced: pauseOnWindowSwitch=ON, pauseOnTabSwitch=OFF, autoPlayOnWindowFocus=OFF" + (reason ? ` (${reason})` : ""));
 }
 
 // Load settings from storage
@@ -434,14 +434,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
         log("  Previous tab:", lastActiveTabId, "in window", lastActiveWindowId);
         log("  Settings: pauseOnTabSwitch =", settings.pauseOnTabSwitch);
         
-        const isSameWindow = lastActiveWindowId === activeInfo.windowId;
-
-        // Tab switch pausing is disabled; leave tracing for context only.
-        if (!isSameWindow) {
-            log("  >>> Tab switch across windows, skipping pause logic");
-        } else {
-            log("  >>> Tab pause DISABLED, skipping");
-        }
+        log("  >>> Centralized control: tab switch does not pause/resume");
 
         // Ensure the tab's window association stays current
         const currentState = tabMediaState.get(activeInfo.tabId);
@@ -498,10 +491,7 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
             log("  Previous tab:", lastActiveTabId, "in window", lastActiveWindowId);
             log("  Settings: pauseOnWindowSwitch =", settings.pauseOnWindowSwitch);
             log("  Settings: autoPlayOnWindowFocus =", settings.autoPlayOnWindowFocus);
-            
-            const isWindowSwitch = lastActiveWindowId !== windowId;
-            const isTabSwitch = lastActiveTabId !== tab.id;
-            log("  isWindowSwitch:", isWindowSwitch, "isTabSwitch:", isTabSwitch);
+            log("  >>> Centralized control: window focus does not pause/resume");
 
             const activeState = await tryGetTabState(tab.id);
             if (activeState && typeof activeState.playing === "boolean") {
@@ -525,48 +515,7 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 
             const targetWindowHasPlaying = isActiveTabPlaying(tab.id);
             log("  Target window active tab is playing:", targetWindowHasPlaying);
-            
-            // PAUSE previous window's tab if setting enabled and we switched windows
-            if (settings.pauseOnWindowSwitch && isWindowSwitch && lastActiveTabId !== null && lastActiveTabId !== tab.id) {
-                const prevState = tabMediaState.get(lastActiveTabId);
-                log("  Previous tab state:", prevState ? JSON.stringify(prevState) : "NOT TRACKED");
 
-                if (!targetWindowHasPlaying) {
-                    log("  >>> Target window has no playing media, keeping previous window playing");
-                } else if (prevState && prevState.playing) {
-                    log("  >>> WILL PAUSE previous window's tab:", lastActiveTabId, "-", prevState.title);
-                    await pauseTab(lastActiveTabId);
-                } else if (!prevState) {
-                    // Tab not tracked - try to pause anyway (best effort)
-                    log("  >>> Previous tab NOT TRACKED, trying to pause anyway:", lastActiveTabId);
-                    await pauseTab(lastActiveTabId, false); // Don't mark as pausedByExtension since we're not sure
-                } else {
-                    log("  >>> NOT pausing previous tab (already paused)");
-                }
-            } else if (!settings.pauseOnWindowSwitch) {
-                log("  >>> Window pause DISABLED in settings, skipping");
-            } else if (!isWindowSwitch) {
-                log("  >>> Same window, skipping pause logic");
-            } else {
-                log("  >>> No previous tab or same tab, skipping pause logic");
-            }
-            
-            // AUTO-PLAY current window's tab if setting enabled and it was paused by extension
-            // This triggers when browser regains focus (after BROWSER_LOST_FOCUS)
-            if (settings.autoPlayOnWindowFocus) {
-                const currentState = tabMediaState.get(tab.id);
-                log("  Current tab state:", currentState ? JSON.stringify(currentState) : "NOT TRACKED");
-                
-                if (currentState && currentState.pausedByExtension) {
-                    log("  >>> WILL AUTO-PLAY current tab:", tab.id, "-", currentState.title);
-                    await playTab(tab.id);
-                } else {
-                    log("  >>> NOT auto-playing (not paused by extension or not tracked)");
-                }
-            } else {
-                log("  >>> Auto-play DISABLED in settings, skipping");
-            }
-            
             // Update tracking
             lastActiveTabId = tab.id;
             lastActiveWindowId = windowId;
