@@ -112,6 +112,22 @@ async function loadSettings() {
             chrome.storage.local.get(null)
         ]);
         settings = { ...settings, ...localResult, ...syncResult };
+        // Extension is only for pausing behavior; enforce the core switches ON.
+        if (!settings.pauseOnWindowSwitch || !settings.pauseOnTabSwitch) {
+            settings.pauseOnWindowSwitch = true;
+            settings.pauseOnTabSwitch = true;
+            await Promise.all([
+                chrome.storage.sync.set({
+                    pauseOnTabSwitch: true,
+                    pauseOnWindowSwitch: true
+                }),
+                chrome.storage.local.set({
+                    pauseOnTabSwitch: true,
+                    pauseOnWindowSwitch: true
+                })
+            ]);
+            log("Settings forced ON for pauseOnWindowSwitch and pauseOnTabSwitch");
+        }
         log("Settings loaded:", settings);
     } catch (e) {
         log("!!! Error loading settings:", e.message);

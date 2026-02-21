@@ -31,6 +31,7 @@ You can add exceptions for which applications are never muted.
 * Auto-play monitor guards against overlapping ticks to prevent rapid play/pause bursts
 * Browser focus-loss pausing follows the Pause on tab switch setting
 * Extension settings fall back to local storage when sync is unavailable
+* Pause-on-tab and pause-on-window are enforced ON while the extension is enabled
 
 # Requirements
 * .NET 8.0 (https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
