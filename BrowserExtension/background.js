@@ -277,7 +277,8 @@ function sendTabStates() {
             tabId: tabId,
             playing: state.playing,
             title: state.title,
-            url: state.url
+            url: state.url,
+            windowId: state.windowId
         });
     });
     
@@ -383,7 +384,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     tabId: tabId,
                     playing: anyPlaying,
                     title: sender.tab.title,
-                    url: sender.tab.url
+                    url: sender.tab.url,
+                    windowId: sender.tab.windowId
                 });
             }
             break;

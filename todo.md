@@ -29,6 +29,7 @@
 - [x] Native messaging host writes to the same log file for troubleshooting.
 - [x] Allow native messaging host to connect to coordinator across integrity levels (pipe security + longer timeout).
 - [x] Pause other browser profiles only when the focused window has active playback.
+- [x] Use recent playback (grace window) to decide whether window focus should pause other profiles.
 - [x] Guard pipe ACL setup failures so the coordinator can still accept connections.
 
 ### 1) UX & Controls.

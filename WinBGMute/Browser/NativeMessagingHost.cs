@@ -179,13 +179,14 @@ namespace WinBGMuter.Browser
             var playing = root.GetProperty("playing").GetBoolean();
             var title = root.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
             var url = root.TryGetProperty("url", out var u) ? u.GetString() ?? "" : "";
+            var windowId = root.TryGetProperty("windowId", out var w) ? w.GetInt32() : -1;
 
-            _tabs[tabId] = new TabInfo(tabId, playing, title, url);
+            _tabs[tabId] = new TabInfo(tabId, playing, title, url, windowId);
 
             LoggingEngine.LogLine($"[NativeMessaging] Tab {tabId} media state: {(playing ? "playing" : "paused")} - {title}",
                 category: LoggingEngine.LogCategory.MediaControl);
 
-            TabStateChanged?.Invoke(this, new TabStateChangedEventArgs(tabId, playing, title, url));
+            TabStateChanged?.Invoke(this, new TabStateChangedEventArgs(tabId, playing, title, url, windowId));
         }
 
         private void HandleTabActivated(JsonElement root)
@@ -222,7 +223,8 @@ namespace WinBGMuter.Browser
 
             var title = removed?.Title ?? string.Empty;
             var url = removed?.Url ?? string.Empty;
-            TabStateChanged?.Invoke(this, new TabStateChangedEventArgs(tabId, false, title, url));
+            var windowId = removed?.WindowId ?? -1;
+            TabStateChanged?.Invoke(this, new TabStateChangedEventArgs(tabId, false, title, url, windowId));
         }
 
         private void HandleTabStates(JsonElement root)
@@ -239,8 +241,9 @@ namespace WinBGMuter.Browser
                 var playing = tab.GetProperty("playing").GetBoolean();
                 var title = tab.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
                 var url = tab.TryGetProperty("url", out var u) ? u.GetString() ?? "" : "";
+                var windowId = tab.TryGetProperty("windowId", out var w) ? w.GetInt32() : -1;
 
-                _tabs[tabId] = new TabInfo(tabId, playing, title, url);
+                _tabs[tabId] = new TabInfo(tabId, playing, title, url, windowId);
             }
 
             LoggingEngine.LogLine($"[NativeMessaging] Received {_tabs.Count} tab states",
@@ -248,7 +251,7 @@ namespace WinBGMuter.Browser
 
             foreach (var tab in _tabs.Values)
             {
-                TabStateChanged?.Invoke(this, new TabStateChangedEventArgs(tab.TabId, tab.IsPlaying, tab.Title, tab.Url));
+                TabStateChanged?.Invoke(this, new TabStateChangedEventArgs(tab.TabId, tab.IsPlaying, tab.Title, tab.Url, tab.WindowId));
             }
         }
 
@@ -353,7 +356,7 @@ namespace WinBGMuter.Browser
         }
     }
 
-    internal sealed record TabInfo(int TabId, bool IsPlaying, string Title, string Url);
+    internal sealed record TabInfo(int TabId, bool IsPlaying, string Title, string Url, int WindowId);
 
     internal sealed class TabStateChangedEventArgs : EventArgs
     {
@@ -361,13 +364,15 @@ namespace WinBGMuter.Browser
         public bool IsPlaying { get; }
         public string Title { get; }
         public string Url { get; }
+        public int WindowId { get; }
 
-        public TabStateChangedEventArgs(int tabId, bool isPlaying, string title, string url)
+        public TabStateChangedEventArgs(int tabId, bool isPlaying, string title, string url, int windowId)
         {
             TabId = tabId;
             IsPlaying = isPlaying;
             Title = title;
             Url = url;
+            WindowId = windowId;
         }
     }
 

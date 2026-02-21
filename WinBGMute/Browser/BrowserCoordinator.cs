@@ -17,10 +17,13 @@ namespace WinBGMuter.Browser
     internal sealed class BrowserCoordinator : IDisposable
     {
         private const int CoordinatorPort = 32145;
+        private static readonly TimeSpan RecentPlaybackWindow = TimeSpan.FromSeconds(3);
         private readonly CancellationTokenSource _cts = new();
         private readonly ConcurrentDictionary<string, ConnectedExtension> _extensions = new();
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, bool>> _extensionTabStates = new();
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, int>> _extensionTabWindows = new();
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, DateTime>> _extensionWindowLastPlaying = new();
+        private readonly ConcurrentDictionary<string, int> _extensionFocusedWindow = new();
         private Task? _serverTask;
         private TcpListener? _listener;
         private bool _disposed;
@@ -62,6 +65,7 @@ namespace WinBGMuter.Browser
                     _extensions.TryAdd(extensionId, extension);
                     _extensionTabStates.TryAdd(extensionId, new ConcurrentDictionary<int, bool>());
                     _extensionTabWindows.TryAdd(extensionId, new ConcurrentDictionary<int, int>());
+                    _extensionWindowLastPlaying.TryAdd(extensionId, new ConcurrentDictionary<int, DateTime>());
                     
                     LoggingEngine.LogLine($"[BrowserCoordinator] Extension connected: {extensionId}",
                         category: LoggingEngine.LogCategory.MediaControl);
@@ -153,6 +157,8 @@ namespace WinBGMuter.Browser
             _extensions.TryRemove(extensionId, out _);
             _extensionTabStates.TryRemove(extensionId, out _);
             _extensionTabWindows.TryRemove(extensionId, out _);
+            _extensionWindowLastPlaying.TryRemove(extensionId, out _);
+            _extensionFocusedWindow.TryRemove(extensionId, out _);
             LoggingEngine.LogLine($"[BrowserCoordinator] Extension disconnected: {extensionId}",
                 category: LoggingEngine.LogCategory.MediaControl);
         }
@@ -179,6 +185,19 @@ namespace WinBGMuter.Browser
                             TryGetBool(root, out var playing, "playing", "IsPlaying"))
                         {
                             UpdateExtensionTabState(extensionId, tabId, playing);
+
+                            if (TryGetInt(root, out var windowId, "windowId", "WindowId"))
+                            {
+                                UpdateExtensionTabWindow(extensionId, tabId, windowId);
+                                if (playing)
+                                {
+                                    MarkWindowPlaying(extensionId, windowId);
+                                    if (IsExtensionFocusedWindow(extensionId, windowId))
+                                    {
+                                        PauseAllExceptExtension(extensionId);
+                                    }
+                                }
+                            }
                         }
                     }
                     else if (type == "tabStates")
@@ -193,6 +212,14 @@ namespace WinBGMuter.Browser
                                     TryGetBool(tab, out var playing, "playing", "IsPlaying"))
                                 {
                                     updated[tabId] = playing;
+                                    if (TryGetInt(tab, out var windowId, "windowId", "WindowId"))
+                                    {
+                                        UpdateExtensionTabWindow(extensionId, tabId, windowId);
+                                        if (playing)
+                                        {
+                                            MarkWindowPlaying(extensionId, windowId);
+                                        }
+                                    }
                                 }
                             }
 
@@ -231,12 +258,19 @@ namespace WinBGMuter.Browser
                             TryGetInt(root, out var focusedWindowId, "windowId", "WindowId"))
                         {
                             UpdateExtensionTabWindow(extensionId, focusedTabId, focusedWindowId);
+                            _extensionFocusedWindow[extensionId] = focusedWindowId;
 
-                            if (!IsWindowPlaying(extensionId, focusedWindowId))
+                            if (!ShouldPauseOnWindowFocus(extensionId, focusedWindowId, out var usedGrace))
                             {
                                 LoggingEngine.LogLine($"[BrowserCoordinator] Focused window {focusedWindowId} has no playing media; skipping pause",
                                     category: LoggingEngine.LogCategory.MediaControl);
                                 return;
+                            }
+
+                            if (usedGrace)
+                            {
+                                LoggingEngine.LogLine($"[BrowserCoordinator] Focused window {focusedWindowId} was recently playing; pausing other profiles",
+                                    category: LoggingEngine.LogCategory.MediaControl);
                             }
                         }
 
@@ -279,6 +313,45 @@ namespace WinBGMuter.Browser
         {
             var tabs = _extensionTabWindows.GetOrAdd(extensionId, _ => new ConcurrentDictionary<int, int>());
             tabs[tabId] = windowId;
+        }
+
+        private void MarkWindowPlaying(string extensionId, int windowId)
+        {
+            if (windowId <= 0)
+            {
+                return;
+            }
+
+            var windows = _extensionWindowLastPlaying.GetOrAdd(extensionId, _ => new ConcurrentDictionary<int, DateTime>());
+            windows[windowId] = DateTime.UtcNow;
+        }
+
+        private bool ShouldPauseOnWindowFocus(string extensionId, int windowId, out bool usedGrace)
+        {
+            if (IsWindowPlaying(extensionId, windowId))
+            {
+                usedGrace = false;
+                return true;
+            }
+
+            if (_extensionWindowLastPlaying.TryGetValue(extensionId, out var windows) &&
+                windows.TryGetValue(windowId, out var lastPlayingUtc))
+            {
+                if (DateTime.UtcNow - lastPlayingUtc <= RecentPlaybackWindow)
+                {
+                    usedGrace = true;
+                    return true;
+                }
+            }
+
+            usedGrace = false;
+            return false;
+        }
+
+        private bool IsExtensionFocusedWindow(string extensionId, int windowId)
+        {
+            return _extensionFocusedWindow.TryGetValue(extensionId, out var focusedWindowId) &&
+                   focusedWindowId == windowId;
         }
 
         private bool IsWindowPlaying(string extensionId, int windowId)

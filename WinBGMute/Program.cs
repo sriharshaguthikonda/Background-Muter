@@ -116,7 +116,7 @@ namespace WinBGMuter
             };
             host.TabStateChanged += (s, e) =>
             {
-                coordinatorClient.SendMessage(new { type = "mediaStateChanged", e.TabId, e.IsPlaying, e.Title });
+                coordinatorClient.SendMessage(new { type = "mediaStateChanged", e.TabId, e.IsPlaying, e.Title, e.WindowId });
             };
             
             host.Start();
