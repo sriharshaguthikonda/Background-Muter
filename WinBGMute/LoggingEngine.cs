@@ -18,6 +18,7 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.IO;
 
 namespace WinBGMuter
 {
@@ -33,6 +34,11 @@ namespace WinBGMuter
         public static LOG_LEVEL_TYPE LogLevel { get; set; }
 
         public static bool HasDateTime {  get; set; }    
+
+        public static bool FileLoggingEnabled { get; set; } = true;
+        public static string? LogFilePath { get; private set; }
+
+        private static readonly object m_fileLock = new object();
 
         private static _LogFunction m_logFunction = DefaultLogFunction;
         private static _LogLineFunction m_logLineFunction = DefaultLogLineFunction;
@@ -97,6 +103,54 @@ namespace WinBGMuter
             m_logLineFunction = loglinefn;
         }
 
+        public static void InitializeFileLogging(string? baseDir = null)
+        {
+            try
+            {
+                var rootDir = baseDir;
+                if (string.IsNullOrWhiteSpace(rootDir))
+                {
+                    rootDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "Background Muter",
+                        "Logs");
+                }
+
+                Directory.CreateDirectory(rootDir);
+                var fileName = $"bgmuter-{DateTime.Now:yyyy-MM-dd}.log";
+                LogFilePath = Path.Combine(rootDir, fileName);
+
+                lock (m_fileLock)
+                {
+                    File.AppendAllText(LogFilePath, $"--- Log started {DateTime.Now:O} ---{Environment.NewLine}");
+                }
+            }
+            catch
+            {
+                // Never throw from logging setup.
+            }
+        }
+
+        private static void WriteFile(string line)
+        {
+            if (!FileLoggingEnabled || string.IsNullOrWhiteSpace(LogFilePath))
+            {
+                return;
+            }
+
+            try
+            {
+                lock (m_fileLock)
+                {
+                    File.AppendAllText(LogFilePath, line + Environment.NewLine);
+                }
+            }
+            catch
+            {
+                // File logging should never crash the app.
+            }
+        }
+
         private static string FormatInput(object input, LOG_LEVEL_TYPE loglevel = LOG_LEVEL_TYPE.LOG_DEBUG, LogCategory category = LogCategory.General)
         {
             string output = "";
@@ -108,30 +162,37 @@ namespace WinBGMuter
         }
         public static void Log(object input, object? color = null, object? font = null, LOG_LEVEL_TYPE loglevel = LOG_LEVEL_TYPE.LOG_DEBUG, LogCategory category = LogCategory.General)
         {
-            if (!Enabled)
-                return;
-
             //todo: add a separate function which does this instead of duplicating it
             if ((loglevel > LogLevel) || (LogLevel == LOG_LEVEL_TYPE.LOG_NONE))
             {
                 return;
             }
 
-            
-            m_logFunction(FormatInput(input, loglevel, category), color, font);
+            var formatted = FormatInput(input, loglevel, category);
+
+            if (Enabled)
+            {
+                m_logFunction(formatted, color, font);
+            }
+
+            WriteFile(formatted);
         }
 
         public static void LogLine(object input, object? color = null, object? font = null, LOG_LEVEL_TYPE loglevel=LOG_LEVEL_TYPE.LOG_DEBUG, LogCategory category = LogCategory.General)
         {
-            if (!Enabled)
-                return;
-
             if ((loglevel > LogLevel) || (LogLevel == LOG_LEVEL_TYPE.LOG_NONE))
             {
                 return;
             }
 
-            m_logLineFunction(FormatInput(input, loglevel, category), color, font);
+            var formatted = FormatInput(input, loglevel, category);
+
+            if (Enabled)
+            {
+                m_logLineFunction(formatted, color, font);
+            }
+
+            WriteFile(formatted);
         }
 
     }

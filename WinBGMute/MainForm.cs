@@ -447,6 +447,7 @@ namespace WinBGMuter
         {
             LoggingEngine.LogLevel = LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG;
             LoggingEngine.HasDateTime = true;
+            LoggingEngine.InitializeFileLogging();
             
             // Initialize logging engine with correct output target
             if (Properties.Settings.Default.EnableConsole)
