@@ -2,6 +2,8 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -54,6 +56,7 @@ namespace WinBGMuter.Browser
                         NamedPipeServerStream.MaxAllowedServerInstances,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous);
+                    pipe.SetAccessControl(CreatePipeSecurity());
 
                     await pipe.WaitForConnectionAsync(_cts.Token);
                     
@@ -78,6 +81,23 @@ namespace WinBGMuter.Browser
                         loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
                 }
             }
+        }
+
+        private static PipeSecurity CreatePipeSecurity()
+        {
+            var pipeSecurity = new PipeSecurity();
+            var authenticatedUsers = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
+            var currentUser = WindowsIdentity.GetCurrent().User;
+            var localSystem = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+
+            pipeSecurity.AddAccessRule(new PipeAccessRule(authenticatedUsers, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+            if (currentUser != null)
+            {
+                pipeSecurity.AddAccessRule(new PipeAccessRule(currentUser, PipeAccessRights.FullControl, AccessControlType.Allow));
+            }
+            pipeSecurity.AddAccessRule(new PipeAccessRule(localSystem, PipeAccessRights.FullControl, AccessControlType.Allow));
+
+            return pipeSecurity;
         }
 
         /// <summary>
