@@ -17,6 +17,8 @@ namespace WinBGMuter.Browser
         private const int MaxMessageSize = 1024 * 1024; // 1MB max
         private readonly CancellationTokenSource _cts = new();
         private readonly ConcurrentDictionary<int, TabInfo> _tabs = new();
+        private readonly Stream _stdout = Console.OpenStandardOutput();
+        private readonly SemaphoreSlim _writeLock = new(1, 1);
         private Task? _readTask;
         private bool _disposed;
 
@@ -58,6 +60,9 @@ namespace WinBGMuter.Browser
                     var bytesRead = await ReadExactlyAsync(stdin, buffer, 0, buffer.Length, _cts.Token).ConfigureAwait(false);
                     if (bytesRead == 0)
                     {
+                        LoggingEngine.LogLine("[NativeMessaging] Stdin closed (EOF), stopping host",
+                            category: LoggingEngine.LogCategory.MediaControl,
+                            loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
                         break; // EOF
                     }
                     if (bytesRead < buffer.Length)
@@ -102,6 +107,10 @@ namespace WinBGMuter.Browser
                         loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
                 }
             }
+
+            LoggingEngine.LogLine("[NativeMessaging] Read loop ended",
+                category: LoggingEngine.LogCategory.MediaControl,
+                loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
         }
 
         private static async Task<int> ReadExactlyAsync(Stream stream, byte[] buffer, int offset, int count, CancellationToken ct)
@@ -291,10 +300,17 @@ namespace WinBGMuter.Browser
                 var bytes = Encoding.UTF8.GetBytes(json);
                 var lengthBytes = BitConverter.GetBytes(bytes.Length);
 
-                using var stdout = Console.OpenStandardOutput();
-                stdout.Write(lengthBytes, 0, 4);
-                stdout.Write(bytes, 0, bytes.Length);
-                stdout.Flush();
+                _writeLock.Wait();
+                try
+                {
+                    _stdout.Write(lengthBytes, 0, 4);
+                    _stdout.Write(bytes, 0, bytes.Length);
+                    _stdout.Flush();
+                }
+                finally
+                {
+                    _writeLock.Release();
+                }
 
                 LoggingEngine.LogLine($"[NativeMessaging] Sent: {json}",
                     category: LoggingEngine.LogCategory.MediaControl);
@@ -331,6 +347,8 @@ namespace WinBGMuter.Browser
             if (_disposed) return;
             _disposed = true;
             Stop();
+            _writeLock.Dispose();
+            _stdout.Dispose();
             _cts.Dispose();
         }
     }
