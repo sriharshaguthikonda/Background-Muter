@@ -104,6 +104,26 @@ let settings = {
     autoPlayOnWindowFocus: true
 };
 
+function enforcePauseSettings(reason) {
+    if (settings.pauseOnWindowSwitch && settings.pauseOnTabSwitch) {
+        return;
+    }
+
+    settings.pauseOnWindowSwitch = true;
+    settings.pauseOnTabSwitch = true;
+
+    chrome.storage.sync.set({
+        pauseOnTabSwitch: true,
+        pauseOnWindowSwitch: true
+    });
+    chrome.storage.local.set({
+        pauseOnTabSwitch: true,
+        pauseOnWindowSwitch: true
+    });
+
+    log("Settings forced ON for pauseOnWindowSwitch and pauseOnTabSwitch" + (reason ? ` (${reason})` : ""));
+}
+
 // Load settings from storage
 async function loadSettings() {
     try {
@@ -113,21 +133,7 @@ async function loadSettings() {
         ]);
         settings = { ...settings, ...localResult, ...syncResult };
         // Extension is only for pausing behavior; enforce the core switches ON.
-        if (!settings.pauseOnWindowSwitch || !settings.pauseOnTabSwitch) {
-            settings.pauseOnWindowSwitch = true;
-            settings.pauseOnTabSwitch = true;
-            await Promise.all([
-                chrome.storage.sync.set({
-                    pauseOnTabSwitch: true,
-                    pauseOnWindowSwitch: true
-                }),
-                chrome.storage.local.set({
-                    pauseOnTabSwitch: true,
-                    pauseOnWindowSwitch: true
-                })
-            ]);
-            log("Settings forced ON for pauseOnWindowSwitch and pauseOnTabSwitch");
-        }
+        enforcePauseSettings("load");
         log("Settings loaded:", settings);
     } catch (e) {
         log("!!! Error loading settings:", e.message);
@@ -334,6 +340,7 @@ async function pauseAllTabsExcept(exceptTabId) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'settingsChanged') {
         settings = { ...settings, ...message.settings };
+        enforcePauseSettings("options");
         log("Settings updated from options page:", settings);
         sendResponse({ success: true });
         return true;
@@ -619,6 +626,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
                 log("Setting changed:", key, "=", newValue);
             }
         }
+        enforcePauseSettings(`storage:${areaName}`);
     }
 });
 

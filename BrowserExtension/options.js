@@ -20,16 +20,24 @@ async function readSettings() {
 async function loadSettings() {
     const result = await readSettings();
 
-    document.getElementById('pauseOnTabSwitch').checked = result.pauseOnTabSwitch;
-    document.getElementById('pauseOnWindowSwitch').checked = result.pauseOnWindowSwitch;
-    document.getElementById('autoPlayOnWindowFocus').checked = result.autoPlayOnWindowFocus;
+    const pauseOnTabSwitch = document.getElementById('pauseOnTabSwitch');
+    const pauseOnWindowSwitch = document.getElementById('pauseOnWindowSwitch');
+    const autoPlayOnWindowFocus = document.getElementById('autoPlayOnWindowFocus');
+
+    // Pause switches are mandatory while the extension is enabled.
+    pauseOnTabSwitch.checked = true;
+    pauseOnTabSwitch.disabled = true;
+    pauseOnWindowSwitch.checked = true;
+    pauseOnWindowSwitch.disabled = true;
+
+    autoPlayOnWindowFocus.checked = result.autoPlayOnWindowFocus;
 }
 
 // Save settings to storage
 async function saveSettings() {
     const settings = {
-        pauseOnTabSwitch: document.getElementById('pauseOnTabSwitch').checked,
-        pauseOnWindowSwitch: document.getElementById('pauseOnWindowSwitch').checked,
+        pauseOnTabSwitch: true,
+        pauseOnWindowSwitch: true,
         autoPlayOnWindowFocus: document.getElementById('autoPlayOnWindowFocus').checked
     };
     
