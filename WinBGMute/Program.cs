@@ -78,6 +78,12 @@ namespace WinBGMuter
         /// </summary>
         private static void RunNativeMessagingHost()
         {
+            LoggingEngine.LogLevel = LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG;
+            LoggingEngine.HasDateTime = true;
+            LoggingEngine.Enabled = true;
+            LoggingEngine.InitializeFileLogging();
+            LoggingEngine.LogLine("[NativeMessaging] Host starting", category: LoggingEngine.LogCategory.MediaControl);
+
             using var host = new NativeMessagingHost();
             using var coordinatorClient = new BrowserCoordinatorClient();
             
@@ -86,6 +92,9 @@ namespace WinBGMuter
             
             if (!connectedToCoordinator)
             {
+                LoggingEngine.LogLine("[CoordinatorClient] Connection timed out - main app not running?",
+                    category: LoggingEngine.LogCategory.MediaControl,
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
                 return;
             }
 
