@@ -20,6 +20,7 @@
 - [x] Tie browser focus-loss pausing to the Pause on tab switch setting.
 - [x] Persist extension settings in both sync and local storage for reliability.
 - [x] Enforce pause-on-tab and pause-on-window ON while the extension is enabled.
+- [x] Lock pause-on-tab/window toggles in options and ignore storage overrides.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
