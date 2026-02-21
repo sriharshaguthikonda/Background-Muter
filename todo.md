@@ -17,6 +17,7 @@
 - [x] Handle GSMTC sessions without AUMID so pause/resume can resolve them reliably.
 - [x] Policy evaluation resolves process names per PID for accurate include/exclude behavior.
 - [x] Release COM audio session objects on VolumeMixer reload to avoid leaks.
+- [x] Tie browser focus-loss pausing to the Pause on tab switch setting.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.

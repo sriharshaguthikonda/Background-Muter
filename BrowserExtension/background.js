@@ -45,6 +45,11 @@ function isWindowPlaying(windowId) {
 }
 
 function scheduleFocusLossPause() {
+    if (!settings.pauseOnTabSwitch) {
+        log("BROWSER LOST FOCUS ignored (pauseOnTabSwitch disabled)");
+        return;
+    }
+
     if (pendingFocusLossTimer) {
         clearTimeout(pendingFocusLossTimer);
         pendingFocusLossTimer = null;
@@ -65,7 +70,7 @@ function scheduleFocusLossPause() {
         }
 
         log("BROWSER LOST FOCUS (confirmed)");
-        if (settings.pauseOnWindowSwitch) {
+        if (settings.pauseOnWindowSwitch && settings.pauseOnTabSwitch) {
             pauseAllTabs().catch(() => {});
         }
         if (nativePort) {
