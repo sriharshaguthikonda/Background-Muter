@@ -44,6 +44,22 @@ function isWindowPlaying(windowId) {
     return false;
 }
 
+async function isWindowPlayingByQuery(windowId) {
+    try {
+        const tabs = await chrome.tabs.query({ windowId: windowId });
+        if (tabs.length === 0) {
+            return false;
+        }
+        const states = await Promise.all(
+            tabs.map(tab => tryGetTabState(tab.id))
+        );
+        return states.some(state => state && state.playing === true);
+    } catch (e) {
+        log("Window playing query failed:", e.message);
+        return false;
+    }
+}
+
 function scheduleFocusLossPause() {
     if (pendingFocusLossTimer) {
         clearTimeout(pendingFocusLossTimer);
@@ -518,7 +534,7 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
                 });
             }
 
-            const targetWindowHasPlaying = isWindowPlaying(windowId);
+            const targetWindowHasPlaying = await isWindowPlayingByQuery(windowId);
             log("  Target window has playing media:", targetWindowHasPlaying);
             
             // PAUSE previous window's tab if setting enabled and we switched windows
