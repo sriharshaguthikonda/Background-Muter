@@ -27,7 +27,7 @@ namespace WinBGMuter.Browser
 
         public bool IsConnected => _pipe?.IsConnected ?? false;
 
-        public bool TryConnect(int timeoutMs = 1000)
+        public bool TryConnect(int timeoutMs = 5000)
         {
             try
             {
