@@ -6,10 +6,20 @@ const DEFAULT_SETTINGS = {
     autoPlayOnWindowFocus: true
 };
 
+async function readSettings() {
+    const [syncResult, localResult] = await Promise.all([
+        chrome.storage.sync.get(null),
+        chrome.storage.local.get(null)
+    ]);
+
+    // Prefer sync when available, but fall back to local when sync is empty/disabled.
+    return { ...DEFAULT_SETTINGS, ...localResult, ...syncResult };
+}
+
 // Load settings from storage
 async function loadSettings() {
-    const result = await chrome.storage.sync.get(DEFAULT_SETTINGS);
-    
+    const result = await readSettings();
+
     document.getElementById('pauseOnTabSwitch').checked = result.pauseOnTabSwitch;
     document.getElementById('pauseOnWindowSwitch').checked = result.pauseOnWindowSwitch;
     document.getElementById('autoPlayOnWindowFocus').checked = result.autoPlayOnWindowFocus;
@@ -23,7 +33,10 @@ async function saveSettings() {
         autoPlayOnWindowFocus: document.getElementById('autoPlayOnWindowFocus').checked
     };
     
-    await chrome.storage.sync.set(settings);
+    await Promise.all([
+        chrome.storage.sync.set(settings),
+        chrome.storage.local.set(settings)
+    ]);
     
     // Notify background script of settings change
     chrome.runtime.sendMessage({ type: 'settingsChanged', settings });
