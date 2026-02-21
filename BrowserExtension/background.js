@@ -107,8 +107,11 @@ let settings = {
 // Load settings from storage
 async function loadSettings() {
     try {
-        const result = await chrome.storage.sync.get(settings);
-        settings = { ...settings, ...result };
+        const [syncResult, localResult] = await Promise.all([
+            chrome.storage.sync.get(null),
+            chrome.storage.local.get(null)
+        ]);
+        settings = { ...settings, ...localResult, ...syncResult };
         log("Settings loaded:", settings);
     } catch (e) {
         log("!!! Error loading settings:", e.message);
@@ -593,7 +596,7 @@ async function initializeActiveTab() {
 
 // Listen for storage changes (in case settings changed from another context)
 chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'sync') {
+    if (areaName === 'sync' || areaName === 'local') {
         for (const [key, { newValue }] of Object.entries(changes)) {
             if (key in settings) {
                 settings[key] = newValue;

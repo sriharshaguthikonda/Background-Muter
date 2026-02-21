@@ -30,6 +30,7 @@ You can add exceptions for which applications are never muted.
 * Auto-play respects active browser playback (e.g., Edge tabs) to avoid resuming while a browser is playing
 * Auto-play monitor guards against overlapping ticks to prevent rapid play/pause bursts
 * Browser focus-loss pausing follows the Pause on tab switch setting
+* Extension settings fall back to local storage when sync is unavailable
 
 # Requirements
 * .NET 8.0 (https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
