@@ -21,6 +21,7 @@
 - [x] Persist extension settings in both sync and local storage for reliability.
 - [x] Enforce pause-on-tab and pause-on-window ON while the extension is enabled.
 - [x] Lock pause-on-tab/window toggles in options and ignore storage overrides.
+- [x] Disable tab-switch pausing and enforce window-switch pause only.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.

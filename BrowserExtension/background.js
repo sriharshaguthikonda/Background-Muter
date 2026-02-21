@@ -45,11 +45,6 @@ function isWindowPlaying(windowId) {
 }
 
 function scheduleFocusLossPause() {
-    if (!settings.pauseOnTabSwitch) {
-        log("BROWSER LOST FOCUS ignored (pauseOnTabSwitch disabled)");
-        return;
-    }
-
     if (pendingFocusLossTimer) {
         clearTimeout(pendingFocusLossTimer);
         pendingFocusLossTimer = null;
@@ -70,7 +65,7 @@ function scheduleFocusLossPause() {
         }
 
         log("BROWSER LOST FOCUS (confirmed)");
-        if (settings.pauseOnWindowSwitch && settings.pauseOnTabSwitch) {
+        if (settings.pauseOnWindowSwitch) {
             pauseAllTabs().catch(() => {});
         }
         if (nativePort) {
@@ -99,29 +94,29 @@ async function tryGetTabState(tabId) {
 
 // Settings (loaded from storage)
 let settings = {
-    pauseOnTabSwitch: true,
+    pauseOnTabSwitch: false,
     pauseOnWindowSwitch: true,
     autoPlayOnWindowFocus: true
 };
 
 function enforcePauseSettings(reason) {
-    if (settings.pauseOnWindowSwitch && settings.pauseOnTabSwitch) {
+    if (settings.pauseOnWindowSwitch && settings.pauseOnTabSwitch === false) {
         return;
     }
 
     settings.pauseOnWindowSwitch = true;
-    settings.pauseOnTabSwitch = true;
+    settings.pauseOnTabSwitch = false;
 
     chrome.storage.sync.set({
-        pauseOnTabSwitch: true,
+        pauseOnTabSwitch: false,
         pauseOnWindowSwitch: true
     });
     chrome.storage.local.set({
-        pauseOnTabSwitch: true,
+        pauseOnTabSwitch: false,
         pauseOnWindowSwitch: true
     });
 
-    log("Settings forced ON for pauseOnWindowSwitch and pauseOnTabSwitch" + (reason ? ` (${reason})` : ""));
+    log("Settings forced: pauseOnWindowSwitch=ON, pauseOnTabSwitch=OFF" + (reason ? ` (${reason})` : ""));
 }
 
 // Load settings from storage
@@ -132,7 +127,7 @@ async function loadSettings() {
             chrome.storage.local.get(null)
         ]);
         settings = { ...settings, ...localResult, ...syncResult };
-        // Extension is only for pausing behavior; enforce the core switches ON.
+        // Extension is only for window-switch pausing; enforce the core switch ON and tab switch OFF.
         enforcePauseSettings("load");
         log("Settings loaded:", settings);
     } catch (e) {
@@ -436,23 +431,11 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
         
         const isSameWindow = lastActiveWindowId === activeInfo.windowId;
 
-        // Only pause if setting is enabled and this is a same-window tab switch
-        if (settings.pauseOnTabSwitch && isSameWindow && lastActiveTabId !== null && lastActiveTabId !== activeInfo.tabId) {
-            const prevState = tabMediaState.get(lastActiveTabId);
-            log("  Previous tab state:", prevState ? (prevState.playing ? "PLAYING" : "PAUSED") : "NOT TRACKED");
-            
-            if (prevState && prevState.playing) {
-                log("  >>> WILL PAUSE previous tab:", lastActiveTabId, "-", prevState.title);
-                await pauseTab(lastActiveTabId);
-            } else {
-                log("  >>> NOT pausing previous tab (not playing or not tracked)");
-            }
-        } else if (!settings.pauseOnTabSwitch) {
-            log("  >>> Tab pause DISABLED in settings, skipping");
-        } else if (!isSameWindow) {
+        // Tab switch pausing is disabled; leave tracing for context only.
+        if (!isSameWindow) {
             log("  >>> Tab switch across windows, skipping pause logic");
         } else {
-            log("  >>> Same tab or no previous tab, skipping pause logic");
+            log("  >>> Tab pause DISABLED, skipping");
         }
 
         // Ensure the tab's window association stays current
