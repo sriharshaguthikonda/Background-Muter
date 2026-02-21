@@ -33,6 +33,7 @@ You can add exceptions for which applications are never muted.
 * Extension settings fall back to local storage when sync is unavailable
 * Pause control is centralized: the extension only tracks media and obeys the coordinator commands
 * App writes a daily log file for troubleshooting
+* Coordinator pipe ACL setup is best-effort and logs a warning if it cannot apply permissions
 
 # Requirements
 * .NET 8.0 (https://dotnet.microsoft.com/en-us/download/dotnet/8.0)

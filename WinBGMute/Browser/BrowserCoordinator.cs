@@ -56,7 +56,16 @@ namespace WinBGMuter.Browser
                         NamedPipeServerStream.MaxAllowedServerInstances,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous);
-                    pipe.SetAccessControl(CreatePipeSecurity());
+                    try
+                    {
+                        pipe.SetAccessControl(CreatePipeSecurity());
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingEngine.LogLine($"[BrowserCoordinator] Failed to set pipe ACLs: {ex.Message}",
+                            category: LoggingEngine.LogCategory.MediaControl,
+                            loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+                    }
 
                     await pipe.WaitForConnectionAsync(_cts.Token);
                     
@@ -79,6 +88,14 @@ namespace WinBGMuter.Browser
                     LoggingEngine.LogLine($"[BrowserCoordinator] Server error: {ex.Message}",
                         category: LoggingEngine.LogCategory.MediaControl,
                         loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+                    try
+                    {
+                        await Task.Delay(500, _cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
                 }
             }
         }

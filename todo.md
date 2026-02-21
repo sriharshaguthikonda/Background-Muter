@@ -28,6 +28,7 @@
 - [x] Always write app logs to a daily file for troubleshooting.
 - [x] Native messaging host writes to the same log file for troubleshooting.
 - [x] Allow native messaging host to connect to coordinator across integrity levels (pipe security + longer timeout).
+- [x] Guard pipe ACL setup failures so the coordinator can still accept connections.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
