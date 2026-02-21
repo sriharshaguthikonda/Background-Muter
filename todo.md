@@ -22,6 +22,7 @@
 - [x] Enforce pause-on-tab and pause-on-window ON while the extension is enabled.
 - [x] Lock pause-on-tab/window toggles in options and ignore storage overrides.
 - [x] Disable tab-switch pausing and enforce window-switch pause only.
+- [x] Only pause on window switch when a tab in the newly focused window is actively playing (query-based check).
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
