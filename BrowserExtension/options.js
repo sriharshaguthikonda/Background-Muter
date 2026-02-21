@@ -30,7 +30,8 @@ async function loadSettings() {
     pauseOnWindowSwitch.checked = true;
     pauseOnWindowSwitch.disabled = true;
 
-    autoPlayOnWindowFocus.checked = result.autoPlayOnWindowFocus;
+    autoPlayOnWindowFocus.checked = false;
+    autoPlayOnWindowFocus.disabled = true;
 }
 
 // Save settings to storage
@@ -38,7 +39,7 @@ async function saveSettings() {
     const settings = {
         pauseOnTabSwitch: false,
         pauseOnWindowSwitch: true,
-        autoPlayOnWindowFocus: document.getElementById('autoPlayOnWindowFocus').checked
+        autoPlayOnWindowFocus: false
     };
     
     await Promise.all([

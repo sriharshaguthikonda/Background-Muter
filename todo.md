@@ -24,6 +24,7 @@
 - [x] Disable tab-switch pausing and enforce window-switch pause only.
 - [x] Only pause on window switch when a tab in the newly focused window is actively playing (query-based check).
 - [x] Only pause on window switch when the focused window's active tab is playing.
+- [x] Centralize pause control: extension only tracks media + obeys coordinator commands.
 
 ### 1) UX & Controls.
 - [x] Tray icon state: show when pausing is active vs. snoozed/disabled.
