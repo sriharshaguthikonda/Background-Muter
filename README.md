@@ -34,6 +34,7 @@ You can add exceptions for which applications are never muted.
 * Pause control is centralized: the extension only tracks media and obeys the coordinator commands
 * App writes a daily log file for troubleshooting
 * Coordinator pipe ACL setup is best-effort and logs a warning if it cannot apply permissions
+* Coordinator only pauses other profiles when the focused window is actively playing
 
 # Requirements
 * .NET 8.0 (https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
@@ -66,7 +67,7 @@ flowchart LR
 
 **What happens on focus change**
 1) Edge window gains focus (any profile) → Extension sends `windowFocused` to its native host → main app → BrowserCoordinator  
-2) Coordinator tells all other profiles to `pauseAll`  
+2) Coordinator tells all other profiles to `pauseAll` **only if the focused window is playing**  
 3) Focused profile may `playFocused` its active tab if it was paused by the extension  
 4) Main app never issues Win32 pauses to browsers (it is delegated to extensions)
 

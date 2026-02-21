@@ -20,6 +20,7 @@ namespace WinBGMuter.Browser
         private readonly CancellationTokenSource _cts = new();
         private readonly ConcurrentDictionary<string, ConnectedExtension> _extensions = new();
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, bool>> _extensionTabStates = new();
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, int>> _extensionTabWindows = new();
         private Task? _serverTask;
         private TcpListener? _listener;
         private bool _disposed;
@@ -60,6 +61,7 @@ namespace WinBGMuter.Browser
                     var extension = new ConnectedExtension(extensionId, client, this);
                     _extensions.TryAdd(extensionId, extension);
                     _extensionTabStates.TryAdd(extensionId, new ConcurrentDictionary<int, bool>());
+                    _extensionTabWindows.TryAdd(extensionId, new ConcurrentDictionary<int, int>());
                     
                     LoggingEngine.LogLine($"[BrowserCoordinator] Extension connected: {extensionId}",
                         category: LoggingEngine.LogCategory.MediaControl);
@@ -150,6 +152,7 @@ namespace WinBGMuter.Browser
         {
             _extensions.TryRemove(extensionId, out _);
             _extensionTabStates.TryRemove(extensionId, out _);
+            _extensionTabWindows.TryRemove(extensionId, out _);
             LoggingEngine.LogLine($"[BrowserCoordinator] Extension disconnected: {extensionId}",
                 category: LoggingEngine.LogCategory.MediaControl);
         }
@@ -196,6 +199,14 @@ namespace WinBGMuter.Browser
                             _extensionTabStates.AddOrUpdate(extensionId, updated, (_, __) => updated);
                         }
                     }
+                    else if (type == "tabActivated")
+                    {
+                        if (TryGetInt(root, out var tabId, "tabId", "TabId") &&
+                            TryGetInt(root, out var windowId, "windowId", "WindowId"))
+                        {
+                            UpdateExtensionTabWindow(extensionId, tabId, windowId);
+                        }
+                    }
                     else if (type == "tabClosed")
                     {
                         if (TryGetInt(root, out var tabId, "tabId", "TabId"))
@@ -204,6 +215,10 @@ namespace WinBGMuter.Browser
                             {
                                 tabs.TryRemove(tabId, out _);
                             }
+                            if (_extensionTabWindows.TryGetValue(extensionId, out var windows))
+                            {
+                                windows.TryRemove(tabId, out _);
+                            }
                         }
                     }
                     else if (type == "windowFocused")
@@ -211,8 +226,21 @@ namespace WinBGMuter.Browser
                         var title = root.TryGetProperty("title", out var titleEl) ? titleEl.GetString() : "";
                         LoggingEngine.LogLine($"[BrowserCoordinator] Extension {extensionId} focused: {title}",
                             category: LoggingEngine.LogCategory.MediaControl);
-                        
-                        // This profile gained focus, pause all others
+
+                        if (TryGetInt(root, out var focusedTabId, "tabId", "TabId") &&
+                            TryGetInt(root, out var focusedWindowId, "windowId", "WindowId"))
+                        {
+                            UpdateExtensionTabWindow(extensionId, focusedTabId, focusedWindowId);
+
+                            if (!IsWindowPlaying(extensionId, focusedWindowId))
+                            {
+                                LoggingEngine.LogLine($"[BrowserCoordinator] Focused window {focusedWindowId} has no playing media; skipping pause",
+                                    category: LoggingEngine.LogCategory.MediaControl);
+                                return;
+                            }
+                        }
+
+                        // This profile gained focus and is playing, pause all others.
                         PauseAllExceptExtension(extensionId);
                     }
                 }
@@ -245,6 +273,31 @@ namespace WinBGMuter.Browser
         {
             var tabs = _extensionTabStates.GetOrAdd(extensionId, _ => new ConcurrentDictionary<int, bool>());
             tabs[tabId] = isPlaying;
+        }
+
+        private void UpdateExtensionTabWindow(string extensionId, int tabId, int windowId)
+        {
+            var tabs = _extensionTabWindows.GetOrAdd(extensionId, _ => new ConcurrentDictionary<int, int>());
+            tabs[tabId] = windowId;
+        }
+
+        private bool IsWindowPlaying(string extensionId, int windowId)
+        {
+            if (!_extensionTabStates.TryGetValue(extensionId, out var tabStates) ||
+                !_extensionTabWindows.TryGetValue(extensionId, out var tabWindows))
+            {
+                return false;
+            }
+
+            foreach (var kvp in tabStates)
+            {
+                if (kvp.Value && tabWindows.TryGetValue(kvp.Key, out var tabWindowId) && tabWindowId == windowId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool HasAnyPlayingTab()
