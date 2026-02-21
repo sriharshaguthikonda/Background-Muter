@@ -80,7 +80,8 @@ namespace WinBGMuter
         {
             LoggingEngine.LogLevel = LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG;
             LoggingEngine.HasDateTime = true;
-            LoggingEngine.Enabled = true;
+            // Native messaging uses stdout for protocol; disable console logging here.
+            LoggingEngine.Enabled = false;
             LoggingEngine.InitializeFileLogging();
             LoggingEngine.LogLine("[NativeMessaging] Host starting", category: LoggingEngine.LogCategory.MediaControl);
 

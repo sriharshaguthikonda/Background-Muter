@@ -57,6 +57,7 @@
 - [ ] Optional “snooze pausing for N minutes” timer.
 - [ ] Replace coordinator IPC with localhost TCP for reliability.
 - [ ] Keep native messaging stdout open to prevent premature host disconnects.
+- [ ] Disable console logging in native host to avoid corrupting stdout protocol.
 
 ### 5) Config & Persistence
 - [ ] Persist settings per user; include export/import of pause rules and exceptions.
