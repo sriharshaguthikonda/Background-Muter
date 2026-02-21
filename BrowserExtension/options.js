@@ -24,8 +24,8 @@ async function loadSettings() {
     const pauseOnWindowSwitch = document.getElementById('pauseOnWindowSwitch');
     const autoPlayOnWindowFocus = document.getElementById('autoPlayOnWindowFocus');
 
-    // Pause switches are mandatory while the extension is enabled.
-    pauseOnTabSwitch.checked = true;
+    // Window switch pausing is mandatory; tab switch pausing is disabled.
+    pauseOnTabSwitch.checked = false;
     pauseOnTabSwitch.disabled = true;
     pauseOnWindowSwitch.checked = true;
     pauseOnWindowSwitch.disabled = true;
@@ -36,7 +36,7 @@ async function loadSettings() {
 // Save settings to storage
 async function saveSettings() {
     const settings = {
-        pauseOnTabSwitch: true,
+        pauseOnTabSwitch: false,
         pauseOnWindowSwitch: true,
         autoPlayOnWindowFocus: document.getElementById('autoPlayOnWindowFocus').checked
     };
