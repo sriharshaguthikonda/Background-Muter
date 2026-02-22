@@ -13,6 +13,7 @@
     
     // Track all media elements in this tab
     const mediaElements = new Set();
+    let ttsPlaying = false;
     let isPlaying = false;
     let lastNotifiedState = null;
     
@@ -42,7 +43,7 @@
                 anyPlaying = true;
             }
         });
-        notifyMediaState(anyPlaying);
+        notifyMediaState(anyPlaying || ttsPlaying);
     }
     
     // Pause all media in this tab
@@ -92,6 +93,13 @@
         // Check initial state
         checkPlayingState();
     }
+
+    function setTtsPlaying(playing) {
+        if (ttsPlaying === playing) return;
+        ttsPlaying = playing;
+        log("TTS state changed:", playing ? "PLAYING" : "PAUSED");
+        checkPlayingState();
+    }
     
     // Find and track all existing media elements
     function findMediaElements() {
@@ -138,6 +146,74 @@
         }
         return true;
     });
+
+    // Listen for TTS events from the page context
+    window.addEventListener("message", (event) => {
+        if (event.source !== window || !event.data || event.data.__bgmuter_tts !== true) {
+            return;
+        }
+        setTtsPlaying(!!event.data.playing);
+    });
+
+    // Inject TTS hook into the page context
+    function injectTtsHook() {
+        const script = document.createElement("script");
+        script.textContent = `
+            (() => {
+                if (window.__bgmuterTtsHooked) return;
+                window.__bgmuterTtsHooked = true;
+                const post = (playing) => {
+                    try { window.postMessage({ __bgmuter_tts: true, playing }, "*"); } catch (e) {}
+                };
+                const synth = window.speechSynthesis;
+                if (!synth) return;
+
+                const wrapUtterance = (utterance) => {
+                    if (!utterance || utterance.__bgmuterTtsWrapped) return;
+                    utterance.__bgmuterTtsWrapped = true;
+                    utterance.addEventListener("start", () => post(true));
+                    utterance.addEventListener("end", () => post(false));
+                    utterance.addEventListener("error", () => post(false));
+                };
+
+                const originalSpeak = synth.speak.bind(synth);
+                synth.speak = (utterance) => {
+                    wrapUtterance(utterance);
+                    post(true);
+                    return originalSpeak(utterance);
+                };
+
+                const originalCancel = synth.cancel.bind(synth);
+                synth.cancel = () => {
+                    post(false);
+                    return originalCancel();
+                };
+
+                const originalPause = synth.pause.bind(synth);
+                synth.pause = () => {
+                    post(false);
+                    return originalPause();
+                };
+
+                const originalResume = synth.resume.bind(synth);
+                synth.resume = () => {
+                    post(true);
+                    return originalResume();
+                };
+
+                let lastSpeaking = synth.speaking;
+                setInterval(() => {
+                    const speaking = synth.speaking;
+                    if (speaking !== lastSpeaking) {
+                        lastSpeaking = speaking;
+                        post(speaking);
+                    }
+                }, 500);
+            })();
+        `;
+        (document.head || document.documentElement).appendChild(script);
+        script.remove();
+    }
     
     // Periodic check for media state (catches edge cases)
     setInterval(() => {
@@ -150,6 +226,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             log("DOM loaded, scanning for media...");
             findMediaElements();
+            injectTtsHook();
             if (document.body) {
                 observer.observe(document.body, { childList: true, subtree: true });
             }
@@ -157,6 +234,7 @@
     } else {
         log("Document ready, scanning for media...");
         findMediaElements();
+        injectTtsHook();
         if (document.body) {
             observer.observe(document.body, { childList: true, subtree: true });
         }
