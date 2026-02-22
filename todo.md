@@ -32,6 +32,7 @@
 - [x] Use recent playback (grace window) to decide whether window focus should pause other profiles.
 - [x] Treat Web Speech TTS as active playback in the extension.
 - [x] Inject TTS hook in the main world to avoid CSP blocks.
+- [x] Use the tab audible flag as a fallback for TTS/read-aloud detection.
 - [x] Guard pipe ACL setup failures so the coordinator can still accept connections.
 - [x] Cap log files to the last 1000 lines.
 

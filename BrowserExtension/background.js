@@ -84,13 +84,13 @@ function logState() {
     log("  tabMediaState size:", tabMediaState.size);
     tabMediaState.forEach((state, tabId) => {
         const frames = state.frameStates ? state.frameStates.size : 0;
-        log(`    Tab ${tabId}: window=${state.windowId}, playing=${state.playing}, frames=${frames}, title="${state.title}"`);
+        log(`    Tab ${tabId}: window=${state.windowId}, playing=${state.playing}, audible=${!!state.audible}, frames=${frames}, title="${state.title}"`);
     });
     log("=============");
 }
 
 // Track tabs with active media
-// tabId -> { playing: bool, title: string, url: string, windowId: number, pausedByExtension: bool, frameStates: Map<frameId, bool> }
+// tabId -> { playing: bool, audible: bool, title: string, url: string, windowId: number, pausedByExtension: bool, frameStates: Map<frameId, bool> }
 const tabMediaState = new Map();
 
 // Track the last active tab that was playing
@@ -333,6 +333,46 @@ async function pauseAllTabs() {
     }
 }
 
+async function updateTabAudibleState(tabId, audible) {
+    try {
+        const tab = await chrome.tabs.get(tabId);
+        const existing = tabMediaState.get(tabId);
+        const frameStates = existing?.frameStates ?? new Map();
+        const anyPlaying = Array.from(frameStates.values()).some(Boolean);
+        const playing = audible || anyPlaying;
+        tabMediaState.set(tabId, {
+            playing: playing,
+            audible: audible,
+            title: tab.title || "",
+            url: tab.url || "",
+            windowId: tab.windowId,
+            pausedByExtension: existing?.pausedByExtension || false,
+            frameStates: frameStates
+        });
+
+        log("*** AUDIBLE STATE CHANGED ***");
+        log("  Tab:", tabId);
+        log("  Title:", tab.title);
+        log("  Audible:", audible);
+        log("  Media playing:", anyPlaying);
+        log("  Now playing:", playing);
+        logState();
+
+        if (nativePort) {
+            nativePort.postMessage({
+                type: "mediaStateChanged",
+                tabId: tabId,
+                playing: playing,
+                title: tab.title,
+                url: tab.url,
+                windowId: tab.windowId
+            });
+        }
+    } catch (e) {
+        log("!!! Audible update failed for tab", tabId, "-", e.message);
+    }
+}
+
 // Send current tab states to native app
 function sendTabStates() {
     if (!nativePort) return;
@@ -427,8 +467,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const frameStates = oldState?.frameStates ?? new Map();
             frameStates.set(frameId, message.playing);
             const anyPlaying = Array.from(frameStates.values()).some(Boolean);
+            const audible = oldState?.audible || false;
+            const playing = anyPlaying || audible;
             tabMediaState.set(tabId, {
-                playing: anyPlaying,
+                playing: playing,
+                audible: audible,
                 title: sender.tab.title || "",
                 url: sender.tab.url || "",
                 windowId: sender.tab.windowId,
@@ -440,7 +483,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             log("  Tab:", tabId);
             log("  Title:", sender.tab.title);
             log("  Was:", oldState?.playing ? "PLAYING" : "PAUSED/NONE");
-            log("  Now:", anyPlaying ? "PLAYING" : "PAUSED");
+            log("  Now:", playing ? "PLAYING" : "PAUSED");
             logState();
             
             // Notify native app
@@ -448,7 +491,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 nativePort.postMessage({
                     type: "mediaStateChanged",
                     tabId: tabId,
-                    playing: anyPlaying,
+                    playing: playing,
                     title: sender.tab.title,
                     url: sender.tab.url,
                     windowId: sender.tab.windowId
@@ -464,6 +507,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 frameStates.set(frameId, false);
                 tabMediaState.set(tabId, {
                     playing: false,
+                    audible: false,
                     title: sender.tab.title || "",
                     url: sender.tab.url || "",
                     windowId: sender.tab.windowId,
@@ -571,8 +615,10 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
                 const aggregatedPlaying = frameStates.size > 0
                     ? Array.from(frameStates.values()).some(Boolean)
                     : activeState.playing;
+                const audible = existing?.audible || false;
                 tabMediaState.set(tab.id, {
-                    playing: aggregatedPlaying,
+                    playing: aggregatedPlaying || audible,
+                    audible: audible,
                     title: tab.title || existing?.title || "",
                     url: tab.url || existing?.url || "",
                     windowId: windowId,
@@ -638,6 +684,9 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.status === "complete") {
         injectTtsHook(tabId);
+    }
+    if (typeof changeInfo.audible === "boolean") {
+        updateTabAudibleState(tabId, changeInfo.audible);
     }
 });
 
