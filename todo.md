@@ -31,6 +31,7 @@
 - [x] Pause other browser profiles only when the focused window has active playback.
 - [x] Use recent playback (grace window) to decide whether window focus should pause other profiles.
 - [x] Treat Web Speech TTS as active playback in the extension.
+- [x] Inject TTS hook in the main world to avoid CSP blocks.
 - [x] Guard pipe ACL setup failures so the coordinator can still accept connections.
 - [x] Cap log files to the last 1000 lines.
 

@@ -25,6 +25,7 @@ You can add exceptions for which applications are never muted.
 * **Per-tab media control for browsers via extension + native messaging (multi-profile aware)**
 * Browser extension aggregates per-frame media state to avoid false "not playing"
 * Browser extension treats Web Speech (text-to-speech) as active playback
+* TTS hook is injected into the page (main world) to avoid CSP blocking
 * Extension settings messages are handled in a single listener to avoid duplicate replies
 * GSMTC session control falls back when AUMID is missing to keep pause/resume working
 * Policy evaluation resolves process names per PID for accurate include/exclude behavior

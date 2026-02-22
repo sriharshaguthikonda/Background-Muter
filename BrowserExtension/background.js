@@ -11,6 +11,72 @@ function log(...args) {
     if (DEBUG) console.log("[BGMuter]", new Date().toLocaleTimeString(), ...args);
 }
 
+function ttsHook() {
+    if (window.__bgmuterTtsHooked) return;
+    window.__bgmuterTtsHooked = true;
+
+    const post = (playing) => {
+        try { window.postMessage({ __bgmuter_tts: true, playing }, "*"); } catch (e) {}
+    };
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+
+    const wrapUtterance = (utterance) => {
+        if (!utterance || utterance.__bgmuterTtsWrapped) return;
+        utterance.__bgmuterTtsWrapped = true;
+        utterance.addEventListener("start", () => post(true));
+        utterance.addEventListener("end", () => post(false));
+        utterance.addEventListener("error", () => post(false));
+    };
+
+    const originalSpeak = synth.speak.bind(synth);
+    synth.speak = (utterance) => {
+        wrapUtterance(utterance);
+        post(true);
+        return originalSpeak(utterance);
+    };
+
+    const originalCancel = synth.cancel.bind(synth);
+    synth.cancel = () => {
+        post(false);
+        return originalCancel();
+    };
+
+    const originalPause = synth.pause.bind(synth);
+    synth.pause = () => {
+        post(false);
+        return originalPause();
+    };
+
+    const originalResume = synth.resume.bind(synth);
+    synth.resume = () => {
+        post(true);
+        return originalResume();
+    };
+
+    let lastSpeaking = synth.speaking;
+    setInterval(() => {
+        const speaking = synth.speaking;
+        if (speaking !== lastSpeaking) {
+            lastSpeaking = speaking;
+            post(speaking);
+        }
+    }, 500);
+}
+
+async function injectTtsHook(tabId) {
+    try {
+        await chrome.scripting.executeScript({
+            target: { tabId, allFrames: true },
+            world: "MAIN",
+            func: ttsHook
+        });
+        log("Injected TTS hook into tab:", tabId);
+    } catch (e) {
+        log("TTS hook inject failed for tab", tabId, ":", e.message);
+    }
+}
+
 function logState() {
     log("=== STATE ===");
     log("  lastActiveTabId:", lastActiveTabId);
@@ -569,6 +635,16 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     }
 });
 
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo.status === "complete") {
+        injectTtsHook(tabId);
+    }
+});
+
+chrome.tabs.onActivated.addListener((activeInfo) => {
+    injectTtsHook(activeInfo.tabId);
+});
+
 // Initialize
 log("==============================================");
 log("BACKGROUND MUTER EXTENSION STARTING");
@@ -578,6 +654,9 @@ log("==============================================");
 (async () => {
     await loadSettings();
     await initializeActiveTab();
+    if (lastActiveTabId) {
+        injectTtsHook(lastActiveTabId);
+    }
     connectNativeHost();
     log("Extension initialized - ready to track tabs");
     logState();
