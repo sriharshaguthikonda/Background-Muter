@@ -277,9 +277,9 @@ function connectNativeHost() {
         });
         
         console.log("[BGMuter] Connected to native host");
-        
-        // Send initial state
-        sendTabStates();
+
+        // Send initial state after syncing audible flags
+        refreshAudibleStates().finally(() => sendTabStates());
     } catch (e) {
         console.error("[BGMuter] Failed to connect to native host:", e);
         nativeHostEnabled = false;
@@ -333,9 +333,9 @@ async function pauseAllTabs() {
     }
 }
 
-async function updateTabAudibleState(tabId, audible) {
+async function updateTabAudibleState(tabId, audible, tabOverride = null) {
     try {
-        const tab = await chrome.tabs.get(tabId);
+        const tab = tabOverride || await chrome.tabs.get(tabId);
         const existing = tabMediaState.get(tabId);
         const frameStates = existing?.frameStates ?? new Map();
         const anyPlaying = Array.from(frameStates.values()).some(Boolean);
@@ -370,6 +370,31 @@ async function updateTabAudibleState(tabId, audible) {
         }
     } catch (e) {
         log("!!! Audible update failed for tab", tabId, "-", e.message);
+    }
+}
+
+async function refreshAudibleStates() {
+    try {
+        const tabs = await chrome.tabs.query({});
+        for (const tab of tabs) {
+            if (typeof tab.audible === "boolean") {
+                const existing = tabMediaState.get(tab.id);
+                const frameStates = existing?.frameStates ?? new Map();
+                const anyPlaying = Array.from(frameStates.values()).some(Boolean);
+                const playing = tab.audible || anyPlaying;
+                tabMediaState.set(tab.id, {
+                    playing: playing,
+                    audible: tab.audible,
+                    title: tab.title || existing?.title || "",
+                    url: tab.url || existing?.url || "",
+                    windowId: tab.windowId,
+                    pausedByExtension: existing?.pausedByExtension || false,
+                    frameStates: frameStates
+                });
+            }
+        }
+    } catch (e) {
+        log("!!! Audible refresh failed:", e.message);
     }
 }
 
@@ -538,6 +563,9 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
     try {
         const tab = await chrome.tabs.get(activeInfo.tabId);
+        if (typeof tab.audible === "boolean") {
+            updateTabAudibleState(tab.id, tab.audible, tab);
+        }
         
         log("========================================");
         log("TAB ACTIVATED EVENT");
@@ -604,6 +632,10 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
             log("  Settings: pauseOnWindowSwitch =", settings.pauseOnWindowSwitch);
             log("  Settings: autoPlayOnWindowFocus =", settings.autoPlayOnWindowFocus);
             log("  >>> Centralized control: window focus does not pause/resume");
+
+            if (typeof tab.audible === "boolean") {
+                updateTabAudibleState(tab.id, tab.audible, tab);
+            }
 
             const activeState = await tryGetTabState(tab.id);
             if (activeState && typeof activeState.playing === "boolean") {

@@ -27,6 +27,7 @@ You can add exceptions for which applications are never muted.
 * Browser extension treats Web Speech (text-to-speech) as active playback
 * TTS hook is injected into the page (main world) to avoid CSP blocking
 * Audible tab state is used as a fallback to detect playback (e.g., Read Aloud/TTS)
+* Audible state is refreshed on focus/activation to keep TTS detection reliable
 * Extension settings messages are handled in a single listener to avoid duplicate replies
 * GSMTC session control falls back when AUMID is missing to keep pause/resume working
 * Policy evaluation resolves process names per PID for accurate include/exclude behavior
