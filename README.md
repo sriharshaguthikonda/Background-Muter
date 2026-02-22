@@ -37,6 +37,7 @@ You can add exceptions for which applications are never muted.
 * Coordinator pipe ACL setup is best-effort and logs a warning if it cannot apply permissions
 * Coordinator only pauses other profiles when the focused window is actively playing
 * Coordinator uses a short recent-playback grace window to handle event ordering on focus changes
+* Log files are capped to the last 1000 lines for size control
 
 # Requirements
 * .NET 8.0 (https://dotnet.microsoft.com/en-us/download/dotnet/8.0)

@@ -39,6 +39,8 @@ namespace WinBGMuter
         public static string? LogFilePath { get; private set; }
 
         private static readonly object m_fileLock = new object();
+        private const int MaxLogLines = 1000;
+        private static int _fileLineCount;
 
         private static _LogFunction m_logFunction = DefaultLogFunction;
         private static _LogLineFunction m_logLineFunction = DefaultLogLineFunction;
@@ -122,7 +124,10 @@ namespace WinBGMuter
 
                 lock (m_fileLock)
                 {
+                    _fileLineCount = CountExistingLines(LogFilePath);
                     File.AppendAllText(LogFilePath, $"--- Log started {DateTime.Now:O} ---{Environment.NewLine}");
+                    _fileLineCount++;
+                    TrimFileIfNeeded();
                 }
             }
             catch
@@ -143,11 +148,63 @@ namespace WinBGMuter
                 lock (m_fileLock)
                 {
                     File.AppendAllText(LogFilePath, line + Environment.NewLine);
+                    _fileLineCount++;
+                    TrimFileIfNeeded();
                 }
             }
             catch
             {
                 // File logging should never crash the app.
+            }
+        }
+
+        private static int CountExistingLines(string path)
+        {
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    return 0;
+                }
+
+                int count = 0;
+                foreach (var _ in File.ReadLines(path))
+                {
+                    count++;
+                }
+                return count;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static void TrimFileIfNeeded()
+        {
+            if (_fileLineCount <= MaxLogLines || string.IsNullOrWhiteSpace(LogFilePath))
+            {
+                return;
+            }
+
+            try
+            {
+                var buffer = new Queue<string>(MaxLogLines);
+                foreach (var line in File.ReadLines(LogFilePath))
+                {
+                    if (buffer.Count == MaxLogLines)
+                    {
+                        buffer.Dequeue();
+                    }
+                    buffer.Enqueue(line);
+                }
+
+                File.WriteAllLines(LogFilePath, buffer);
+                _fileLineCount = buffer.Count;
+            }
+            catch
+            {
+                // Keep logging resilient even if trimming fails.
             }
         }
 
