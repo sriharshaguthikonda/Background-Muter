@@ -217,6 +217,9 @@ namespace WinBGMuter
                 _appController.AutoPlaySpotify = enabled;
             }
 
+            m_settingsChanged = true;
+            SaveChangesButton.Enabled = true;
+
             LoggingEngine.LogLine($"[AutoPlay] {(enabled ? "Enabled" : "Disabled")} for {Properties.Settings.Default.AutoPlayAppName}",
                 category: LoggingEngine.LogCategory.General);
         }

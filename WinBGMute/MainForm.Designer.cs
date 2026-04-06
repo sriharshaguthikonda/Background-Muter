@@ -695,7 +695,7 @@ namespace WinBGMuter
             // 
             // MuterTimer
             // 
-            MuterTimer.Interval = 250;
+            MuterTimer.Interval = 2000;
             MuterTimer.Tick += MuterTimer_Tick;
             // 
             // MainForm

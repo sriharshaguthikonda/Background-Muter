@@ -318,30 +318,17 @@ namespace WinBGMuter
             int USE_DARK_MODE = dark ? 1 : 0;
             DwmSetWindowAttribute(parent.Handle, DWMWINDOWATTRIBUTE.DWMWA_USE_IMMERSIVE_DARK_MODE, ref USE_DARK_MODE, sizeof(int));
 
-            Color bgcolor;
-            Color fgcolor;
+            parent.SuspendLayout();
 
             foreach (Control c in parent.Controls)
             {
-                bgcolor = c.BackColor;
-                fgcolor = c.ForeColor;
+                Color bgcolor = c.BackColor;
+                Color fgcolor = c.ForeColor;
 
-                (Color, Color) tag = (bgcolor, fgcolor);
-
-                if ((c.Tag != null) && (!dark))
-                {
-                    tag = ((Color, Color))c.Tag;
-                    bgcolor = tag.Item1;
-                    fgcolor = tag.Item2;
-                }
-
+                // Save original colors before first dark mode application
                 if (c.Tag == null)
                 {
                     c.Tag = (c.BackColor, c.ForeColor);
-                }
-                else
-                {
-
                 }
 
                 if (dark)
@@ -351,9 +338,9 @@ namespace WinBGMuter
                 }
                 else if (c.Tag != null)
                 {
-                    fgcolor = tag.Item1;
-                    fgcolor = tag.Item2;
-
+                    var original = ((Color, Color))c.Tag;
+                    bgcolor = original.Item1;
+                    fgcolor = original.Item2;
                 }
 
                 c.BackColor = bgcolor;
@@ -361,15 +348,14 @@ namespace WinBGMuter
 
                 if (c.Controls.Count > 0)
                     SetDark(c, dark);
+            }
 
-                parent.Refresh();
+            parent.ResumeLayout(true);
 
-                // if main window, force redraw as refresh does not work
-                if (parent.Parent == null)
-                {
-                    parent.Hide();
-                    parent.Show();
-                }
+            // Force title bar redraw on the top-level window
+            if (parent.Parent == null)
+            {
+                parent.Invalidate(true);
             }
         }
 
@@ -508,6 +494,8 @@ namespace WinBGMuter
             m_keepAliveTimer.Enabled = true;
 
             InitializePauseOnUnfocus();
+
+            MuterTimer.Start();
         }
 
         private void Default_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -565,6 +553,9 @@ namespace WinBGMuter
         {
             TrayIcon.Visible = false;
 
+            MuterTimer.Stop();
+            m_keepAliveTimer.Stop();
+            m_keepAliveTimer.Dispose();
             SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
             CleanupPauseOnUnfocus();
 

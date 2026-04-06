@@ -200,8 +200,12 @@ namespace WinBGMuter.Controller
                 }
                 else
                 {
-                    // Wait until the cooldown window has been quiet
-                    await WaitForCooldownAsync().ConfigureAwait(false);
+                    // Check if cooldown has elapsed (non-blocking).
+                    // If not, skip this tick — the next tick will re-check.
+                    if (!IsCooldownElapsed())
+                    {
+                        return;
+                    }
 
                     // No other app is playing - resume target app if it's not playing
                     if (targetSession.PlaybackState != MediaPlaybackState.Playing)
@@ -404,6 +408,12 @@ namespace WinBGMuter.Controller
 
             // 5) Cleanup exited processes
             _stateStore.CleanupExitedProcesses();
+        }
+
+        private bool IsCooldownElapsed()
+        {
+            var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            return Interlocked.Read(ref _cooldownDeadlineMs) - nowMs <= 0;
         }
 
         private void ResetCooldownWindow()
