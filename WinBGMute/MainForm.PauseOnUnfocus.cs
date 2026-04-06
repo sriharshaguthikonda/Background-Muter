@@ -85,80 +85,86 @@ namespace WinBGMuter
                 return;
             }
 
-            // Create a compact panel for audio control options
-            // Add to LogTextBox's parent area (below log) for better visibility
             _pauseSettingsGroupBox = new GroupBox
             {
-                Text = "🔊 Audio Control",
+                Text = "Audio Control",
                 Dock = DockStyle.Bottom,
-                Height = 140,
-                Padding = new Padding(3)
+                Height = 70,
+                Padding = new Padding(3, 0, 3, 2)
             };
 
-            var innerPanel = new FlowLayoutPanel
+            // Row 1: checkboxes side by side
+            var row1 = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                AutoSize = false
+                Dock = DockStyle.Top,
+                Height = 24,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
             };
 
-            // Enable pause checkbox
             _pauseOnUnfocusCheckbox = new CheckBox
             {
-                Text = "Enable Pause on Unfocus",
+                Text = "Pause on Unfocus",
                 Checked = _pauseSettings.Enabled,
                 AutoSize = true,
-                Margin = new Padding(3, 2, 3, 2)
+                Margin = new Padding(3, 2, 12, 0)
             };
             _pauseOnUnfocusCheckbox.CheckedChanged += (s, e) =>
             {
                 OnPauseOnUnfocusToggled(_pauseOnUnfocusCheckbox.Checked);
             };
 
-            // Auto-play app checkbox
             _autoPlaySpotifyCheckbox = new CheckBox
             {
-                Text = "Enable Auto-play when idle",
+                Text = "Auto-play when idle",
                 Checked = Properties.Settings.Default.AutoPlaySpotify,
                 AutoSize = true,
-                Margin = new Padding(3, 2, 3, 2)
+                Margin = new Padding(3, 2, 0, 0)
             };
             _autoPlaySpotifyCheckbox.CheckedChanged += (s, e) =>
             {
                 OnAutoPlaySpotifyToggled(_autoPlaySpotifyCheckbox.Checked);
             };
 
-            // Cooldown input
-            _pauseCooldownNumeric = new NumericUpDown
+            row1.Controls.Add(_pauseOnUnfocusCheckbox);
+            row1.Controls.Add(_autoPlaySpotifyCheckbox);
+
+            // Row 2: cooldown label + numeric
+            var row2 = new FlowLayoutPanel
             {
-                Minimum = 0,
-                Maximum = 600000,
-                Increment = 100,
-                Value = Math.Max(_pauseSettings.PauseCooldownMs, 0),
-                Width = 120,
-                Margin = new Padding(3, 2, 3, 2)
-            };
-            _pauseCooldownNumeric.ValueChanged += (s, e) =>
-            {
-                OnPauseCooldownChanged((int)_pauseCooldownNumeric.Value);
+                Dock = DockStyle.Top,
+                Height = 28,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
             };
 
             var cooldownLabel = new Label
             {
                 Text = "Cooldown (ms):",
                 AutoSize = true,
-                Margin = new Padding(3, 6, 3, 2)
+                Margin = new Padding(3, 4, 0, 0)
             };
 
-            innerPanel.Controls.Add(_pauseOnUnfocusCheckbox);
-            innerPanel.Controls.Add(_autoPlaySpotifyCheckbox);
-            innerPanel.Controls.Add(cooldownLabel);
-            innerPanel.Controls.Add(_pauseCooldownNumeric);
+            _pauseCooldownNumeric = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 600000,
+                Increment = 100,
+                Value = Math.Max(_pauseSettings.PauseCooldownMs, 0),
+                Width = 80,
+                Margin = new Padding(4, 2, 0, 0)
+            };
+            _pauseCooldownNumeric.ValueChanged += (s, e) =>
+            {
+                OnPauseCooldownChanged((int)_pauseCooldownNumeric.Value);
+            };
 
-            _pauseSettingsGroupBox.Controls.Add(innerPanel);
+            row2.Controls.Add(cooldownLabel);
+            row2.Controls.Add(_pauseCooldownNumeric);
 
-            // Add to the main form's panel1 (bottom docked)
+            _pauseSettingsGroupBox.Controls.Add(row2);
+            _pauseSettingsGroupBox.Controls.Add(row1);
+
             if (panel1 != null)
             {
                 panel1.Controls.Add(_pauseSettingsGroupBox);

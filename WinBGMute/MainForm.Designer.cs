@@ -124,7 +124,7 @@ namespace WinBGMuter
             panel1.Location = new Point(0, 0);
             panel1.Margin = new Padding(3, 4, 3, 4);
             panel1.Name = "panel1";
-            panel1.Padding = new Padding(10);
+            panel1.Padding = new Padding(12);
             panel1.Size = new Size(627, 419);
             panel1.TabIndex = 0;
             // 
@@ -139,11 +139,10 @@ namespace WinBGMuter
             tableLayoutPanel1.Location = new Point(0, 0);
             tableLayoutPanel1.Margin = new Padding(3, 4, 3, 4);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
-            tableLayoutPanel1.Padding = new Padding(6, 6, 6, 2);
+            tableLayoutPanel1.Padding = new Padding(4, 4, 4, 2);
             tableLayoutPanel1.RowCount = 2;
-            tableLayoutPanel1.RowStyles.Add(new RowStyle());
-            tableLayoutPanel1.RowStyles.Add(new RowStyle());
-            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 27F));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 65F));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 35F));
             tableLayoutPanel1.Size = new Size(627, 393);
             tableLayoutPanel1.TabIndex = 1;
             // 
@@ -152,7 +151,7 @@ namespace WinBGMuter
             LogTextBox.BackColor = Color.White;
             LogTextBox.BorderStyle = BorderStyle.FixedSingle;
             LogTextBox.Dock = DockStyle.Fill;
-            LogTextBox.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            LogTextBox.Font = new Font("Cascadia Mono", 8.5F, FontStyle.Regular, GraphicsUnit.Point);
             LogTextBox.Location = new Point(9, 326);
             LogTextBox.Margin = new Padding(3, 4, 3, 4);
             LogTextBox.Name = "LogTextBox";
@@ -165,9 +164,9 @@ namespace WinBGMuter
             // TopTableLayout
             // 
             TopTableLayout.ColumnCount = 3;
-            TopTableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 23.5576916F));
-            TopTableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50.3205147F));
-            TopTableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25.9615383F));
+            TopTableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
+            TopTableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            TopTableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30F));
             TopTableLayout.Controls.Add(groupBox1, 0, 0);
             TopTableLayout.Controls.Add(groupBox2, 1, 0);
             TopTableLayout.Controls.Add(groupBox3, 2, 0);
@@ -189,7 +188,7 @@ namespace WinBGMuter
             groupBox1.Location = new Point(7, 8);
             groupBox1.Margin = new Padding(3, 4, 3, 4);
             groupBox1.Name = "groupBox1";
-            groupBox1.Padding = new Padding(8, 10, 8, 8);
+            groupBox1.Padding = new Padding(10, 14, 10, 8);
             groupBox1.Size = new Size(135, 292);
             groupBox1.TabIndex = 0;
             groupBox1.TabStop = false;
@@ -290,7 +289,7 @@ namespace WinBGMuter
             groupBox2.Location = new Point(148, 8);
             groupBox2.Margin = new Padding(3, 4, 3, 4);
             groupBox2.Name = "groupBox2";
-            groupBox2.Padding = new Padding(8, 10, 8, 8);
+            groupBox2.Padding = new Padding(10, 14, 10, 8);
             groupBox2.Size = new Size(298, 292);
             groupBox2.TabIndex = 1;
             groupBox2.TabStop = false;
@@ -344,7 +343,8 @@ namespace WinBGMuter
             ProcessToMuteButton.Name = "ProcessToMuteButton";
             ProcessToMuteButton.Size = new Size(23, 33);
             ProcessToMuteButton.TabIndex = 0;
-            ProcessToMuteButton.Text = ">";
+            ProcessToMuteButton.Text = "\u25B6";
+            ProcessToMuteButton.Cursor = Cursors.Hand;
             ProcessToMuteButton.UseVisualStyleBackColor = true;
             ProcessToMuteButton.Click += ProcessToMuteButton_Click;
             // 
@@ -356,7 +356,8 @@ namespace WinBGMuter
             MuteToProcessButton.Name = "MuteToProcessButton";
             MuteToProcessButton.Size = new Size(23, 29);
             MuteToProcessButton.TabIndex = 1;
-            MuteToProcessButton.Text = "<";
+            MuteToProcessButton.Text = "\u25C0";
+            MuteToProcessButton.Cursor = Cursors.Hand;
             MuteToProcessButton.UseVisualStyleBackColor = true;
             MuteToProcessButton.Click += MuteToProcessButton_Click;
             // 
@@ -445,7 +446,7 @@ namespace WinBGMuter
             groupBox3.Location = new Point(452, 8);
             groupBox3.Margin = new Padding(3, 4, 3, 4);
             groupBox3.Name = "groupBox3";
-            groupBox3.Padding = new Padding(8, 10, 8, 8);
+            groupBox3.Padding = new Padding(10, 14, 10, 8);
             groupBox3.Size = new Size(150, 292);
             groupBox3.TabIndex = 2;
             groupBox3.TabStop = false;
@@ -703,13 +704,13 @@ namespace WinBGMuter
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(246, 247, 249);
-            ClientSize = new Size(900, 560);
+            ClientSize = new Size(960, 600);
             Controls.Add(panel1);
             Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
             HelpButton = true;
             Icon = (Icon)resources.GetObject("$this.Icon");
             Margin = new Padding(3, 4, 3, 4);
-            MinimumSize = new Size(860, 520);
+            MinimumSize = new Size(920, 560);
             Name = "MainForm";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Background Muter (GUI)";

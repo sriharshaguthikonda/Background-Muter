@@ -312,50 +312,170 @@ namespace WinBGMuter
         /// </summary>
         /// <param name="parent"></param>
         /// <param name="dark"></param>
+        // ── Modern Windows 11-style dark palette ──────────────────────
+        private static readonly Color DarkBase     = Color.FromArgb(25, 25, 30);     // window bg
+        private static readonly Color DarkCard     = Color.FromArgb(36, 36, 44);     // card/groupbox bg
+        private static readonly Color DarkInput    = Color.FromArgb(45, 45, 56);     // inputs/lists
+        private static readonly Color DarkBorder   = Color.FromArgb(60, 60, 75);     // subtle borders
+        private static readonly Color DarkFg       = Color.FromArgb(230, 232, 240);  // primary text
+        private static readonly Color DarkFgDim    = Color.FromArgb(150, 155, 170);  // secondary text
+        private static readonly Color DarkAccent   = Color.FromArgb(96, 165, 250);   // blue accent
+        private static readonly Color DarkAccentDim = Color.FromArgb(60, 110, 200);  // pressed accent
+        private static readonly Color DarkHover    = Color.FromArgb(50, 52, 65);     // button hover
+        private static readonly Color DarkLogBg    = Color.FromArgb(18, 18, 24);     // log/console bg
+        private static readonly Color DarkStatusBg = Color.FromArgb(20, 20, 28);     // status bar
+
+        private static readonly Font UIFont       = new Font("Segoe UI", 9F, FontStyle.Regular);
+        private static readonly Font UIFontBold   = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+        private static readonly Font UIFontSmall  = new Font("Segoe UI", 8F, FontStyle.Regular);
+
         private void SetDark(Control parent, bool dark)
         {
-            // only works on main window
             int USE_DARK_MODE = dark ? 1 : 0;
             DwmSetWindowAttribute(parent.Handle, DWMWINDOWATTRIBUTE.DWMWA_USE_IMMERSIVE_DARK_MODE, ref USE_DARK_MODE, sizeof(int));
 
-            parent.SuspendLayout();
+            // Request rounded corners on Windows 11
+            int DWMWCP_ROUND = 2;
+            DwmSetWindowAttribute(parent.Handle, DWMWINDOWATTRIBUTE.DWMWA_WINDOW_CORNER_PREFERENCE, ref DWMWCP_ROUND, sizeof(int));
 
+            parent.SuspendLayout();
+            ApplyThemeRecursive(parent, dark);
+            parent.ResumeLayout(true);
+
+            if (parent.Parent == null)
+            {
+                parent.Invalidate(true);
+            }
+        }
+
+        private void ApplyThemeRecursive(Control parent, bool dark)
+        {
             foreach (Control c in parent.Controls)
             {
-                Color bgcolor = c.BackColor;
-                Color fgcolor = c.ForeColor;
-
-                // Save original colors before first dark mode application
                 if (c.Tag == null)
                 {
-                    c.Tag = (c.BackColor, c.ForeColor);
+                    c.Tag = (c.BackColor, c.ForeColor, c.Font);
                 }
 
                 if (dark)
                 {
-                    bgcolor = Color.FromArgb(25, 25, 25);
-                    fgcolor = Color.White;
+                    ApplyDarkToControl(c);
                 }
-                else if (c.Tag != null)
+                else
                 {
-                    var original = ((Color, Color))c.Tag;
-                    bgcolor = original.Item1;
-                    fgcolor = original.Item2;
+                    RestoreLightControl(c);
                 }
-
-                c.BackColor = bgcolor;
-                c.ForeColor = fgcolor;
 
                 if (c.Controls.Count > 0)
-                    SetDark(c, dark);
+                    ApplyThemeRecursive(c, dark);
+            }
+        }
+
+        private void RestoreLightControl(Control c)
+        {
+            if (c.Tag is (Color bg, Color fg, Font f))
+            {
+                c.BackColor = bg;
+                c.ForeColor = fg;
+                c.Font = f;
             }
 
-            parent.ResumeLayout(true);
-
-            // Force title bar redraw on the top-level window
-            if (parent.Parent == null)
+            if (c is Button btn)
             {
-                parent.Invalidate(true);
+                btn.FlatStyle = FlatStyle.Standard;
+            }
+        }
+
+        private void ApplyDarkToControl(Control c)
+        {
+            c.ForeColor = DarkFg;
+            c.Font = UIFont;
+
+            switch (c)
+            {
+                case Button btn:
+                    btn.BackColor = DarkInput;
+                    btn.ForeColor = DarkFg;
+                    btn.FlatStyle = FlatStyle.Flat;
+                    btn.FlatAppearance.BorderColor = DarkBorder;
+                    btn.FlatAppearance.BorderSize = 1;
+                    btn.FlatAppearance.MouseOverBackColor = DarkHover;
+                    btn.FlatAppearance.MouseDownBackColor = DarkAccentDim;
+                    btn.Cursor = Cursors.Hand;
+                    btn.Padding = new Padding(4, 2, 4, 2);
+                    break;
+
+                case ListBox lb:
+                    lb.BackColor = DarkInput;
+                    lb.ForeColor = DarkFg;
+                    lb.BorderStyle = BorderStyle.FixedSingle;
+                    lb.Font = UIFont;
+                    lb.ItemHeight = 22;
+                    break;
+
+                case TextBox tb:
+                    tb.BackColor = DarkInput;
+                    tb.ForeColor = DarkFg;
+                    tb.BorderStyle = BorderStyle.FixedSingle;
+                    break;
+
+                case RichTextBox rtb:
+                    rtb.BackColor = DarkLogBg;
+                    rtb.ForeColor = DarkFgDim;
+                    rtb.BorderStyle = BorderStyle.None;
+                    rtb.Font = new Font("Cascadia Mono", 8.5F, FontStyle.Regular);
+                    break;
+
+                case NumericUpDown nud:
+                    nud.BackColor = DarkInput;
+                    nud.ForeColor = DarkFg;
+                    nud.BorderStyle = BorderStyle.FixedSingle;
+                    nud.Font = UIFont;
+                    break;
+
+                case CheckBox cb:
+                    cb.BackColor = Color.Transparent;
+                    cb.ForeColor = DarkFg;
+                    cb.Font = UIFont;
+                    break;
+
+                case RadioButton rb:
+                    rb.BackColor = Color.Transparent;
+                    rb.ForeColor = DarkFg;
+                    rb.Font = UIFont;
+                    break;
+
+                case GroupBox gb:
+                    gb.BackColor = DarkCard;
+                    gb.ForeColor = DarkAccent;
+                    gb.Font = UIFontBold;
+                    gb.Padding = new Padding(6, 8, 6, 6);
+                    break;
+
+                case Label lbl:
+                    lbl.BackColor = Color.Transparent;
+                    lbl.ForeColor = DarkFgDim;
+                    lbl.Font = UIFontSmall;
+                    break;
+
+                case StatusStrip ss:
+                    ss.BackColor = DarkStatusBg;
+                    ss.ForeColor = DarkFgDim;
+                    ss.Font = UIFontSmall;
+                    foreach (ToolStripItem item in ss.Items)
+                    {
+                        item.ForeColor = DarkFgDim;
+                        item.Font = UIFontSmall;
+                    }
+                    break;
+
+                case Panel pnl:
+                    pnl.BackColor = DarkBase;
+                    break;
+
+                default:
+                    c.BackColor = DarkBase;
+                    break;
             }
         }
 
@@ -494,6 +614,12 @@ namespace WinBGMuter
             m_keepAliveTimer.Enabled = true;
 
             InitializePauseOnUnfocus();
+
+            // Re-apply dark mode to dynamically created controls
+            if (Properties.Settings.Default.EnableDarkMode)
+            {
+                SetDark(this, true);
+            }
 
             MuterTimer.Start();
         }

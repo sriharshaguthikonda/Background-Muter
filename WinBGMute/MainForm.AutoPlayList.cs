@@ -48,17 +48,21 @@ namespace WinBGMuter
 
             _neverMuteToAutoPlayButton = new Button
             {
-                Text = ">",
+                Text = "\u25B6",
                 Dock = DockStyle.Fill,
-                Name = "NeverMuteToAutoPlayButton"
+                Name = "NeverMuteToAutoPlayButton",
+                Font = new Font("Segoe UI", 8F),
+                Cursor = Cursors.Hand
             };
             _neverMuteToAutoPlayButton.Click += NeverMuteToAutoPlayButton_Click;
 
             _autoPlayToNeverMuteButton = new Button
             {
-                Text = "<",
+                Text = "\u25C0",
                 Dock = DockStyle.Fill,
-                Name = "AutoPlayToNeverMuteButton"
+                Name = "AutoPlayToNeverMuteButton",
+                Font = new Font("Segoe UI", 8F),
+                Cursor = Cursors.Hand
             };
             _autoPlayToNeverMuteButton.Click += AutoPlayToNeverMuteButton_Click;
 
