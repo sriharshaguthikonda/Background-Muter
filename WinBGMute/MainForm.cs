@@ -22,6 +22,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Timers;
 using System.Linq;
+using Microsoft.Win32;
 using WinBGMuter.Config;
 using WinBGMuter.Helpers;
 
@@ -448,6 +449,7 @@ namespace WinBGMuter
             LoggingEngine.LogLevel = LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG;
             LoggingEngine.HasDateTime = true;
             LoggingEngine.InitializeFileLogging();
+            SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
             
             // Initialize logging engine with correct output target
             if (Properties.Settings.Default.EnableConsole)
@@ -563,6 +565,7 @@ namespace WinBGMuter
         {
             TrayIcon.Visible = false;
 
+            SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
             CleanupPauseOnUnfocus();
 
             if (m_settingsChanged)
@@ -836,6 +839,19 @@ along with this program.If not, see < https://www.gnu.org/licenses/>
         private void KeepAliveTimer_Tick(object sender, EventArgs e)
         {
             LoggingEngine.Log("<Keep Alive>");
+        }
+
+        private void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e)
+        {
+            string message = e.Mode switch
+            {
+                PowerModes.Suspend => "[Power] System suspending (sleep/hibernate)",
+                PowerModes.Resume => "[Power] System resumed",
+                PowerModes.StatusChange => "[Power] Power status changed",
+                _ => $"[Power] Power mode changed: {e.Mode}"
+            };
+
+            LoggingEngine.LogLine(message, category: LoggingEngine.LogCategory.General);
         }
 
         private void MainForm_Shown(object sender, EventArgs e)
