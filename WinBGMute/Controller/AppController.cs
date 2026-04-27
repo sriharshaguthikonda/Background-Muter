@@ -27,7 +27,7 @@ namespace WinBGMuter.Controller
         private bool _autoPlaySpotify = false;
         private string _autoPlayAppName = "Spotify";
         private System.Timers.Timer? _autoPlayMonitorTimer;
-        private bool _autoPlayAppPausedByUs = false;
+        private volatile bool _autoPlayAppPausedByUs = false;
         private int _autoPlayTickInProgress = 0;
         private ForegroundChangedEventArgs? _pendingForegroundEvent;
         private int _foregroundWorkerRunning = 0;
