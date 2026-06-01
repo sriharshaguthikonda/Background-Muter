@@ -1,0 +1,277 @@
+﻿{
+    "schemaVersion":  "repo-map-artifact-branch/v1",
+    "repo":  "sriharshaguthikonda/Background-Muter",
+    "generatedAt":  "2026-06-01T06:04:01.2132142Z",
+    "source":  "Repo_maps GitHub footprint publish runner",
+    "publishBranch":  "repo-intel-artifacts",
+    "mapCount":  38,
+    "totalBytes":  20751742,
+    "maps":  [
+                 {
+                     "name":  "chore/add-issues-to-todo",
+                     "ref":  "refs/remotes/origin/chore/add-issues-to-todo",
+                     "commit":  "a2f0f7b2972394b252ebb3efd4c96be0d937749d",
+                     "path":  ".repo-intel/branches/remote-origin/chore-add-issues-to-todo__a2f0f7b29723/repo-map-full.json",
+                     "bytes":  590641
+                 },
+                 {
+                     "name":  "codex/implement-best-effort-focus-enforcer-for-audio",
+                     "ref":  "refs/remotes/origin/codex/implement-best-effort-focus-enforcer-for-audio",
+                     "commit":  "837c23951d114d516975c65ed88d368b09e63515",
+                     "path":  ".repo-intel/branches/remote-origin/codex-implement-best-effort-focus-enforcer-for-audio__837c23951d11/repo-map-full.json",
+                     "bytes":  463466
+                 },
+                 {
+                     "name":  "codex/implement-best-effort-focus-enforcer-for-audio-np6mph",
+                     "ref":  "refs/remotes/origin/codex/implement-best-effort-focus-enforcer-for-audio-np6mph",
+                     "commit":  "670521d43b26264d9f965cda591f6f4969d5e6c9",
+                     "path":  ".repo-intel/branches/remote-origin/codex-implement-best-effort-focus-enforcer-for-audio-np6mph__670521d43b26/repo-map-full.json",
+                     "bytes":  441825
+                 },
+                 {
+                     "name":  "feature/autoplay-respects-browser",
+                     "ref":  "refs/remotes/origin/feature/autoplay-respects-browser",
+                     "commit":  "48a2b49e58e04ee392b401c95a374803258cfdb4",
+                     "path":  ".repo-intel/branches/remote-origin/feature-autoplay-respects-browser__48a2b49e58e0/repo-map-full.json",
+                     "bytes":  590114
+                 },
+                 {
+                     "name":  "feature/autoplay-timer-guard",
+                     "ref":  "refs/remotes/origin/feature/autoplay-timer-guard",
+                     "commit":  "352f98533a3283d3365abb867d629a46f6975876",
+                     "path":  ".repo-intel/branches/remote-origin/feature-autoplay-timer-guard__352f98533a32/repo-map-full.json",
+                     "bytes":  591039
+                 },
+                 {
+                     "name":  "feature/edge-alt-signal",
+                     "ref":  "refs/remotes/origin/feature/edge-alt-signal",
+                     "commit":  "b522d2c5df31246df203b85d1535a126dcfb400c",
+                     "path":  ".repo-intel/branches/remote-origin/feature-edge-alt-signal__b522d2c5df31/repo-map-full.json",
+                     "bytes":  577651
+                 },
+                 {
+                     "name":  "feature/edge-window-switch-guard",
+                     "ref":  "refs/remotes/origin/feature/edge-window-switch-guard",
+                     "commit":  "c890daecb9201c7b3d3513ee95187688c7ca96d2",
+                     "path":  ".repo-intel/branches/remote-origin/feature-edge-window-switch-guard__c890daecb920/repo-map-full.json",
+                     "bytes":  585208
+                 },
+                 {
+                     "name":  "feature/extension-frame-aggregation",
+                     "ref":  "refs/remotes/origin/feature/extension-frame-aggregation",
+                     "commit":  "d3bf5b2a8a0a2b6d0cd88aa830c266fb464af8c4",
+                     "path":  ".repo-intel/branches/remote-origin/feature-extension-frame-aggregation__d3bf5b2a8a0a/repo-map-full.json",
+                     "bytes":  591994
+                 },
+                 {
+                     "name":  "feature/extension-onmessage-merge",
+                     "ref":  "refs/remotes/origin/feature/extension-onmessage-merge",
+                     "commit":  "e8ae8652d326b4fe2742a6ac08213a051b306229",
+                     "path":  ".repo-intel/branches/remote-origin/feature-extension-onmessage-merge__e8ae8652d326/repo-map-full.json",
+                     "bytes":  590611
+                 },
+                 {
+                     "name":  "feature/foreground-event-coalesce",
+                     "ref":  "refs/remotes/origin/feature/foreground-event-coalesce",
+                     "commit":  "a8a4ca5c1c2d4c26bd8d2b9aedfb36894bc8d939",
+                     "path":  ".repo-intel/branches/remote-origin/feature-foreground-event-coalesce__a8a4ca5c1c2d/repo-map-full.json",
+                     "bytes":  591234
+                 },
+                 {
+                     "name":  "feature/gsmtc-null-aumid",
+                     "ref":  "refs/remotes/origin/feature/gsmtc-null-aumid",
+                     "commit":  "d75901dfec7c4832ea89ce80443b62a7c3212456",
+                     "path":  ".repo-intel/branches/remote-origin/feature-gsmtc-null-aumid__d75901dfec7c/repo-map-full.json",
+                     "bytes":  591562
+                 },
+                 {
+                     "name":  "feature/native-host-backoff",
+                     "ref":  "refs/remotes/origin/feature/native-host-backoff",
+                     "commit":  "2f7b60be39eb72eec4e162c6a4ba0f96f5896a95",
+                     "path":  ".repo-intel/branches/remote-origin/feature-native-host-backoff__2f7b60be39eb/repo-map-full.json",
+                     "bytes":  579056
+                 },
+                 {
+                     "name":  "feature/pause-window-switch-conditional",
+                     "ref":  "refs/remotes/origin/feature/pause-window-switch-conditional",
+                     "commit":  "d93d93d22cadda5ac32a13237bc86dddb577d440",
+                     "path":  ".repo-intel/branches/remote-origin/feature-pause-window-switch-conditional__d93d93d22cad/repo-map-full.json",
+                     "bytes":  583494
+                 },
+                 {
+                     "name":  "feature/policy-engine-pid",
+                     "ref":  "refs/remotes/origin/feature/policy-engine-pid",
+                     "commit":  "78ed280a8461f23faa37f66beeebb4c0630868fc",
+                     "path":  ".repo-intel/branches/remote-origin/feature-policy-engine-pid__78ed280a8461/repo-map-full.json",
+                     "bytes":  590810
+                 },
+                 {
+                     "name":  "feature/volume-mixer-com-release",
+                     "ref":  "refs/remotes/origin/feature/volume-mixer-com-release",
+                     "commit":  "e5212bfa781e672cfadd3e9bb747abd2b053cdb0",
+                     "path":  ".repo-intel/branches/remote-origin/feature-volume-mixer-com-release__e5212bfa781e/repo-map-full.json",
+                     "bytes":  591253
+                 },
+                 {
+                     "name":  "feature/window-title-display",
+                     "ref":  "refs/remotes/origin/feature/window-title-display",
+                     "commit":  "364b9b318a02477ce5ef3f844c1d3430b7a726d4",
+                     "path":  ".repo-intel/branches/remote-origin/feature-window-title-display__364b9b318a02/repo-map-full.json",
+                     "bytes":  484160
+                 },
+                 {
+                     "name":  "feature_squirrel_updater",
+                     "ref":  "refs/remotes/origin/feature_squirrel_updater",
+                     "commit":  "e59f471b9afe0b32cff586326ff480b676feffdc",
+                     "path":  ".repo-intel/branches/remote-origin/feature-squirrel-updater__e59f471b9afe/repo-map-full.json",
+                     "bytes":  405282
+                 },
+                 {
+                     "name":  "feature_volume",
+                     "ref":  "refs/remotes/origin/feature_volume",
+                     "commit":  "348dee4cc807809d6a2da013ccff24b30a810589",
+                     "path":  ".repo-intel/branches/remote-origin/feature-volume__348dee4cc807/repo-map-full.json",
+                     "bytes":  397825
+                 },
+                 {
+                     "name":  "feature_windows_installer_native",
+                     "ref":  "refs/remotes/origin/feature_windows_installer_native",
+                     "commit":  "0bd21b1a6fb77eee60ce09ff1518518fa02bc840",
+                     "path":  ".repo-intel/branches/remote-origin/feature-windows-installer-native__0bd21b1a6fb7/repo-map-full.json",
+                     "bytes":  423329
+                 },
+                 {
+                     "name":  "fix/centralize-extension-control",
+                     "ref":  "refs/remotes/origin/fix/centralize-extension-control",
+                     "commit":  "8df22f413dcf8c69ade7ba550423a93105dc2b30",
+                     "path":  ".repo-intel/branches/remote-origin/fix-centralize-extension-control__8df22f413dcf/repo-map-full.json",
+                     "bytes":  593514
+                 },
+                 {
+                     "name":  "fix/extension-settings-storage-fallback",
+                     "ref":  "refs/remotes/origin/fix/extension-settings-storage-fallback",
+                     "commit":  "39026e43ef7165860109d2158895fde127853e19",
+                     "path":  ".repo-intel/branches/remote-origin/fix-extension-settings-storage-fallback__39026e43ef71/repo-map-full.json",
+                     "bytes":  595645
+                 },
+                 {
+                     "name":  "fix/file-logging",
+                     "ref":  "refs/remotes/origin/fix/file-logging",
+                     "commit":  "2cd7fb38713f50c56cc747891d62773dabe9086a",
+                     "path":  ".repo-intel/branches/remote-origin/fix-file-logging__2cd7fb38713f/repo-map-full.json",
+                     "bytes":  595680
+                 },
+                 {
+                     "name":  "fix/focus-loss-pauses-tied-to-tab-switch",
+                     "ref":  "refs/remotes/origin/fix/focus-loss-pauses-tied-to-tab-switch",
+                     "commit":  "7b1b4ba4308e60487ebc18aa8b57f4918624a7c1",
+                     "path":  ".repo-intel/branches/remote-origin/fix-focus-loss-pauses-tied-to-tab-switch__7b1b4ba4308e/repo-map-full.json",
+                     "bytes":  594958
+                 },
+                 {
+                     "name":  "fix/force-pause-settings-on",
+                     "ref":  "refs/remotes/origin/fix/force-pause-settings-on",
+                     "commit":  "a42507b6fbda27869763389eeb1618e916313204",
+                     "path":  ".repo-intel/branches/remote-origin/fix-force-pause-settings-on__a42507b6fbda/repo-map-full.json",
+                     "bytes":  596514
+                 },
+                 {
+                     "name":  "fix/lock-pause-toggles-on",
+                     "ref":  "refs/remotes/origin/fix/lock-pause-toggles-on",
+                     "commit":  "e4093709c854b7f933b8b00ba28d41d5e64e9c4e",
+                     "path":  ".repo-intel/branches/remote-origin/fix-lock-pause-toggles-on__e4093709c854/repo-map-full.json",
+                     "bytes":  596943
+                 },
+                 {
+                     "name":  "fix/native-host-file-logging",
+                     "ref":  "refs/remotes/origin/fix/native-host-file-logging",
+                     "commit":  "759573608c231fc5dbfea132760215edc411832f",
+                     "path":  ".repo-intel/branches/remote-origin/fix-native-host-file-logging__759573608c23/repo-map-full.json",
+                     "bytes":  596369
+                 },
+                 {
+                     "name":  "fix/native-messaging-io",
+                     "ref":  "refs/remotes/origin/fix/native-messaging-io",
+                     "commit":  "cdbbade9d8110291d0a109ae92043b22a8d42536",
+                     "path":  ".repo-intel/branches/remote-origin/fix-native-messaging-io__cdbbade9d811/repo-map-full.json",
+                     "bytes":  579463
+                 },
+                 {
+                     "name":  "fix/pipe-acl-guard",
+                     "ref":  "refs/remotes/origin/fix/pipe-acl-guard",
+                     "commit":  "8dc6ae24d7a2f420493d5b4edd5372f03cf49644",
+                     "path":  ".repo-intel/branches/remote-origin/fix-pipe-acl-guard__8dc6ae24d7a2/repo-map-full.json",
+                     "bytes":  598401
+                 },
+                 {
+                     "name":  "fix/pipe-security-timeout",
+                     "ref":  "refs/remotes/origin/fix/pipe-security-timeout",
+                     "commit":  "dea339d753244110b98287ab504b6c92afb0d52f",
+                     "path":  ".repo-intel/branches/remote-origin/fix-pipe-security-timeout__dea339d75324/repo-map-full.json",
+                     "bytes":  597526
+                 },
+                 {
+                     "name":  "fix/window-switch-active-tab-only",
+                     "ref":  "refs/remotes/origin/fix/window-switch-active-tab-only",
+                     "commit":  "0779940ad9f8af47a0a99594e47e1e79a715db94",
+                     "path":  ".repo-intel/branches/remote-origin/fix-window-switch-active-tab-only__0779940ad9f8/repo-map-full.json",
+                     "bytes":  596460
+                 },
+                 {
+                     "name":  "fix/window-switch-pause-only",
+                     "ref":  "refs/remotes/origin/fix/window-switch-pause-only",
+                     "commit":  "55955f58eef6e29f68b381f7eaa027679620e81a",
+                     "path":  ".repo-intel/branches/remote-origin/fix-window-switch-pause-only__55955f58eef6/repo-map-full.json",
+                     "bytes":  596111
+                 },
+                 {
+                     "name":  "fix/window-switch-requires-playing-tab",
+                     "ref":  "refs/remotes/origin/fix/window-switch-requires-playing-tab",
+                     "commit":  "145a3b02ad9555be06d4477b5d09a0537318bc17",
+                     "path":  ".repo-intel/branches/remote-origin/fix-window-switch-requires-playing-tab__145a3b02ad95/repo-map-full.json",
+                     "bytes":  596746
+                 },
+                 {
+                     "name":  "lamrongol-master",
+                     "ref":  "refs/remotes/origin/lamrongol-master",
+                     "commit":  "f191ecfbf2c21910f5aa825599a81cbc19e747ce",
+                     "path":  ".repo-intel/branches/remote-origin/lamrongol-master__f191ecfbf2c2/repo-map-full.json",
+                     "bytes":  387701
+                 },
+                 {
+                     "name":  "master",
+                     "ref":  "refs/remotes/origin/master",
+                     "commit":  "8dc6ae24d7a2f420493d5b4edd5372f03cf49644",
+                     "path":  ".repo-intel/branches/remote-origin/master__8dc6ae24d7a2/repo-map-full.json",
+                     "bytes":  598401
+                 },
+                 {
+                     "name":  "nefares-patch-1",
+                     "ref":  "refs/remotes/origin/nefares-patch-1",
+                     "commit":  "c9f64ed7995f1395924c727350bf0609f67d0691",
+                     "path":  ".repo-intel/branches/remote-origin/nefares-patch-1__c9f64ed7995f/repo-map-full.json",
+                     "bytes":  393373
+                 },
+                 {
+                     "name":  "nuking-unmute",
+                     "ref":  "refs/remotes/origin/nuking-unmute",
+                     "commit":  "583114e36a38e82c8ef0c66ef677e60466028913",
+                     "path":  ".repo-intel/branches/remote-origin/nuking-unmute__583114e36a38/repo-map-full.json",
+                     "bytes":  479890
+                 },
+                 {
+                     "name":  "test",
+                     "ref":  "refs/remotes/origin/test",
+                     "commit":  "8fd91c631125d18da93c41a364e37ab39efa96f5",
+                     "path":  ".repo-intel/branches/remote-origin/test__8fd91c631125/repo-map-full.json",
+                     "bytes":  376325
+                 },
+                 {
+                     "name":  "upgrade_dotnet8",
+                     "ref":  "refs/remotes/origin/upgrade_dotnet8",
+                     "commit":  "d19ca6a48f3cf3dda34090cc9aeb55c1be85a7a7",
+                     "path":  ".repo-intel/branches/remote-origin/upgrade-dotnet8__d19ca6a48f3c/repo-map-full.json",
+                     "bytes":  393373
+                 }
+             ]
+}
