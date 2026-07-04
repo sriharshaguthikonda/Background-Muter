@@ -20,6 +20,7 @@ namespace WinBGMuter
         private CheckBox? _autoPlaySpotifyCheckbox;
         private TextBox? _autoPlayAppTextBox;
         private NumericUpDown? _pauseCooldownNumeric;
+        private NumericUpDown? _balloonTimeoutNumeric;
         private GroupBox? _pauseSettingsGroupBox;
         private Icon? _trayBaseIcon;
 
@@ -162,6 +163,30 @@ namespace WinBGMuter
             row2.Controls.Add(cooldownLabel);
             row2.Controls.Add(_pauseCooldownNumeric);
 
+            var balloonLabel = new Label
+            {
+                Text = "Notification (ms):",
+                AutoSize = true,
+                Margin = new Padding(12, 4, 0, 0)
+            };
+
+            _balloonTimeoutNumeric = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 60000,
+                Increment = 500,
+                Value = Math.Min(Math.Max(Properties.Settings.Default.BalloonTipTimeoutMs, 0), 60000),
+                Width = 80,
+                Margin = new Padding(4, 2, 0, 0)
+            };
+            _balloonTimeoutNumeric.ValueChanged += (s, e) =>
+            {
+                OnBalloonTimeoutChanged((int)_balloonTimeoutNumeric.Value);
+            };
+
+            row2.Controls.Add(balloonLabel);
+            row2.Controls.Add(_balloonTimeoutNumeric);
+
             _pauseSettingsGroupBox.Controls.Add(row2);
             _pauseSettingsGroupBox.Controls.Add(row1);
 
@@ -260,6 +285,13 @@ namespace WinBGMuter
                 _appController.PauseCooldownMs = cooldownMs;
             }
 
+            m_settingsChanged = true;
+            SaveChangesButton.Enabled = true;
+        }
+
+        private void OnBalloonTimeoutChanged(int timeoutMs)
+        {
+            Properties.Settings.Default.BalloonTipTimeoutMs = timeoutMs;
             m_settingsChanged = true;
             SaveChangesButton.Enabled = true;
         }

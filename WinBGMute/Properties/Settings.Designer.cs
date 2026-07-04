@@ -166,5 +166,17 @@ namespace WinBGMuter.Properties {
                 this["CloseToTray"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("7000")]
+        public int BalloonTipTimeoutMs {
+            get {
+                return ((int)(this["BalloonTipTimeoutMs"]));
+            }
+            set {
+                this["BalloonTipTimeoutMs"] = value;
+            }
+        }
     }
 }
