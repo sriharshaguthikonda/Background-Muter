@@ -67,7 +67,6 @@ namespace WinBGMuter
         public static extern int DwmSetWindowAttribute(IntPtr hwnd, DWMWINDOWATTRIBUTE attr, ref int attrValue, int attrSize);
 
         private VolumeMixer m_volumeMixer;
-        private ForegroundProcessManager m_processManager;
 
         private string m_neverMuteList;
         private bool m_settingsChanged = false;
@@ -508,18 +507,6 @@ namespace WinBGMuter
 
         }
 
-        private void OnProcessExit(object sender, EventArgs e)
-        {
-            try
-            {
-                m_processManager.CleanUp();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Cleanup failed: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
         private void ReloadSettings(object sender, EventArgs e)
         {
             m_neverMuteList = Properties.Settings.Default.NeverMuteProcs;
@@ -580,20 +567,12 @@ namespace WinBGMuter
                 LoggerCheckbox.Checked = Properties.Settings.Default.EnableLogging;
                 LoggerCheckbox_CheckedChanged(sender, EventArgs.Empty);
 
-                m_processManager = new ForegroundProcessManager();
-                m_processManager.Init();
-
                 return;
             }
 
             m_volumeMixer = new VolumeMixer();
-            m_processManager = new ForegroundProcessManager();
 
             ReloadSettings(sender, e);
-
-            m_processManager.Init();
-
-            AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
 
             Properties.Settings.Default.PropertyChanged += Default_PropertyChanged;
 
