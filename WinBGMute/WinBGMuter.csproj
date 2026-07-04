@@ -54,4 +54,7 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="WinBGMute.Tests" />
+  </ItemGroup>
 </Project>
