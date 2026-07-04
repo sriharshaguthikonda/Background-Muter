@@ -728,6 +728,7 @@ namespace WinBGMuter
         {
             Show();
             this.WindowState = FormWindowState.Normal;
+            RefreshProcessListQuiet();
         }
 
         private void LoggerCheckbox_CheckedChanged(object sender, EventArgs e)
@@ -758,6 +759,7 @@ namespace WinBGMuter
 
 private void MuterTimer_Tick(object sender, EventArgs e)
 {
+    if (!WinBGMute.UI.RefreshGate.ShouldRefresh(this.Visible, this.WindowState)) return;
     var sw = System.Diagnostics.Stopwatch.StartNew();
     RefreshProcessList();
     sw.Stop();
