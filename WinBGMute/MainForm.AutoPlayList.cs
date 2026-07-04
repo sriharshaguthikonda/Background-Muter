@@ -163,6 +163,9 @@ namespace WinBGMuter
 
             SaveAutoPlayList();
             RefreshProcessListQuiet();
+
+            m_settingsChanged = true;
+            SaveChangesButton.Enabled = true;
         }
 
         private void AutoPlayToNeverMuteButton_Click(object? sender, EventArgs e)
@@ -186,6 +189,9 @@ namespace WinBGMuter
             // Remove from AutoPlay list
             _autoPlayListBox.Items.Clear();
             SaveAutoPlayList();
+
+            m_settingsChanged = true;
+            SaveChangesButton.Enabled = true;
         }
 
         private void RemoveFromNeverMuteList(string appName)

@@ -928,12 +928,16 @@ along with this program.If not, see < https://www.gnu.org/licenses/>
         {
             Properties.Settings.Default.IsMuteConditionBackground = true;
             m_isMuteConditionBackground = true;
+            m_settingsChanged = true;
+            SaveChangesButton.Enabled = true;
         }
 
         private void MinimizedRadioButton_CheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.IsMuteConditionBackground = false;
             m_isMuteConditionBackground = false;
+            m_settingsChanged = true;
+            SaveChangesButton.Enabled = true;
         }
 
         private void AdvancedButton_MouseClick(object sender, MouseEventArgs e)

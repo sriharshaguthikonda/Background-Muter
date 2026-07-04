@@ -239,6 +239,9 @@ namespace WinBGMuter
                 _appController.AutoPlayAppName = appName;
             }
 
+            m_settingsChanged = true;
+            SaveChangesButton.Enabled = true;
+
             LoggingEngine.LogLine($"[AutoPlay] App changed to: {appName}",
                 category: LoggingEngine.LogCategory.General);
         }
