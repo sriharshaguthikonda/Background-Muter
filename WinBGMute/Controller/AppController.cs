@@ -27,6 +27,7 @@ namespace WinBGMuter.Controller
         private bool _autoPlaySpotify = false;
         private string _autoPlayAppName = "Spotify";
         private System.Timers.Timer? _autoPlayMonitorTimer;
+        private readonly WinBGMute.Diagnostics.PerfProbe _autoPlayProbe = new("AutoPlayTick");
         private volatile bool _autoPlayAppPausedByUs = false;
         private int _autoPlayTickInProgress = 0;
         private ForegroundChangedEventArgs? _pendingForegroundEvent;
@@ -159,6 +160,7 @@ namespace WinBGMuter.Controller
                 return;
             }
 
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 var sessions = await _mediaController.ListSessionsAsync().ConfigureAwait(false);
@@ -238,6 +240,10 @@ namespace WinBGMuter.Controller
             finally
             {
                 Interlocked.Exchange(ref _autoPlayTickInProgress, 0);
+                sw.Stop();
+                _autoPlayProbe.Add(sw.ElapsedMilliseconds);
+                if (_autoPlayProbe.Count % 30 == 0)
+                    LoggingEngine.LogLine(_autoPlayProbe.Snapshot(), loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG, category: LoggingEngine.LogCategory.MediaControl);
             }
         }
 

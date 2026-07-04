@@ -82,6 +82,7 @@ namespace WinBGMuter
 
         // keep alive timer @todo replace the Forms timer with the System.Timer
         private static System.Timers.Timer m_keepAliveTimer = new System.Timers.Timer(600000);
+        private readonly WinBGMute.Diagnostics.PerfProbe _muterProbe = new("MuterTimer");
 
         private sealed class ProcessDisplayItem
         {
@@ -757,7 +758,12 @@ namespace WinBGMuter
 
 private void MuterTimer_Tick(object sender, EventArgs e)
 {
+    var sw = System.Diagnostics.Stopwatch.StartNew();
     RefreshProcessList();
+    sw.Stop();
+    _muterProbe.Add(sw.ElapsedMilliseconds);
+    if (_muterProbe.Count % 30 == 0)
+        LoggingEngine.LogLine(_muterProbe.Snapshot(), loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG, category: LoggingEngine.LogCategory.AudioSessions);
 }
 
 private void CloseMenuTray_Click(object sender, EventArgs e)
