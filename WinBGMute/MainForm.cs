@@ -705,6 +705,7 @@ namespace WinBGMuter
 
         private void SaveChangesButton_Click(object sender, EventArgs e)
         {
+            _pauseSettings?.Save();
             Properties.Settings.Default.Save();
             SettingsFileStore.Save();
             m_settingsChanged = false;

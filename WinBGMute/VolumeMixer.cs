@@ -248,6 +248,48 @@ namespace WinBGMuter
             }
 
         }
+        /// <summary>
+        /// Returns PIDs that have an active audio session (currently producing sound).
+        /// Unlike GetPIDs() which returns all sessions, this only returns sessions
+        /// in the Active state (stream is actively rendering audio).
+        /// </summary>
+        public int[] GetActiveAudioPIDs()
+        {
+            var activePids = new List<int>();
+            try
+            {
+                if (AudioDevice.mgr == null) return Array.Empty<int>();
+
+                AudioDevice.mgr.GetSessionEnumerator(out var sessionEnum);
+                if (sessionEnum == null) return Array.Empty<int>();
+
+                sessionEnum.GetCount(out var count);
+                for (int i = 0; i < count; i++)
+                {
+                    sessionEnum.GetSession(i, out IAudioSessionControl2 ctl);
+                    ctl.GetProcessId(out var pid);
+                    if (pid == 0)
+                    {
+                        Marshal.ReleaseComObject(ctl);
+                        continue;
+                    }
+
+                    ctl.GetState(out var state);
+                    if (state == AudioSessionState.AudioSessionStateActive)
+                    {
+                        activePids.Add(pid);
+                    }
+                    Marshal.ReleaseComObject(ctl);
+                }
+                Marshal.ReleaseComObject(sessionEnum);
+            }
+            catch
+            {
+                // Best-effort; return what we have
+            }
+            return activePids.ToArray();
+        }
+
         private ISimpleAudioVolume GetVolumeObject(int pid)
         {
             ReloadAudio();
@@ -339,12 +381,19 @@ namespace WinBGMuter
         int GetMute(out bool pbMute);
     }
 
+    internal enum AudioSessionState
+    {
+        AudioSessionStateInactive = 0,
+        AudioSessionStateActive = 1,
+        AudioSessionStateExpired = 2
+    }
+
     [Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IAudioSessionControl2
     {
         // IAudioSessionControl
         [PreserveSig]
-        int NotImpl0();
+        int GetState(out AudioSessionState pRetVal);
 
         [PreserveSig]
         int GetDisplayName([MarshalAs(UnmanagedType.LPWStr)] out string pRetVal);

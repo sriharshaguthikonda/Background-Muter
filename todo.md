@@ -1,3 +1,21 @@
+## Open audit issues (P0/P1 — cross-repo audit 2026-04-24)
+
+Branch: `feature/tcp-coordinator`. Source of truth: [GitHub Issues](https://github.com/sriharshaguthikonda/Background-Muter/issues).
+
+### P0 — Critical
+- [#3](https://github.com/sriharshaguthikonda/Background-Muter/issues/3) AutoPlay timer vs foreground-change race on `_autoPlayAppPausedByUs` — `type:bug`
+
+### P1 — Important
+- [#4](https://github.com/sriharshaguthikonda/Background-Muter/issues/4) TCP coordinator accepts any localhost client without auth — `type:security`
+- [#5](https://github.com/sriharshaguthikonda/Background-Muter/issues/5) BrowserCoordinator never disposed on form close → socket/port leak — `type:bug, type:perf`
+- [#6](https://github.com/sriharshaguthikonda/Background-Muter/issues/6) LoggingEngine in-proc lock insufficient; two processes write same file — `type:bug`
+- [#7](https://github.com/sriharshaguthikonda/Background-Muter/issues/7) Storage load race: sync vs local; `enforcePauseSettings` runs on interim state — `type:bug`
+- [#8](https://github.com/sriharshaguthikonda/Background-Muter/issues/8) Foreground-event coalescer CAS loop can drop last event under burst — `type:bug`
+- [#9](https://github.com/sriharshaguthikonda/Background-Muter/issues/9) Native messaging 4-byte length assumes little-endian — `type:bug`
+- [#10](https://github.com/sriharshaguthikonda/Background-Muter/issues/10) LoggingEngine: extract `FormatInput()` duplication (in-repo TODO) — `type:todo, type:dx`
+
+---
+
 ## Pause/Resume Roadmap
 
 - Shift focus: implement pause/resume (not mute) for background sessions.

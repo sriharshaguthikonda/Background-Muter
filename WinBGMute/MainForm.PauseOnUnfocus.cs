@@ -257,7 +257,8 @@ namespace WinBGMuter
                 _appController.PauseCooldownMs = cooldownMs;
             }
 
-            _pauseSettings.Save();
+            m_settingsChanged = true;
+            SaveChangesButton.Enabled = true;
         }
 
         private void CleanupPauseOnUnfocus()

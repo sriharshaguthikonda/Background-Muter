@@ -138,8 +138,6 @@ namespace WinBGMuter
             {
                 _appController.AutoPlayAppName = appName;
             }
-
-            SettingsFileStore.Save();
         }
 
         private void NeverMuteToAutoPlayButton_Click(object? sender, EventArgs e)

@@ -169,14 +169,23 @@ namespace WinBGMuter.Controller
                     return;
                 }
 
-                // Check if any other app is currently playing
+                // Check if any other app is currently playing via GSMTC
                 var otherPlaying = sessions.Any(s =>
                     s.PlaybackState == MediaPlaybackState.Playing &&
                     !IsTargetAppSession(s));
+
+                // Check browser extension reports (tab audible state)
                 var externalPlaying = _isExternalMediaPlaying?.Invoke() ?? false;
                 if (externalPlaying)
                 {
                     otherPlaying = true;
+                }
+
+                // Check Windows audio mixer for active audio sessions (catches TTS,
+                // web audio, and anything else invisible to GSMTC)
+                if (!otherPlaying)
+                {
+                    otherPlaying = IsNonTargetAudioActive();
                 }
 
                 if (otherPlaying)
@@ -440,6 +449,48 @@ namespace WinBGMuter.Controller
                 var delay = (int)Math.Min(remaining, _pauseCooldownMs);
                 await Task.Delay(delay).ConfigureAwait(false);
             }
+        }
+
+        /// <summary>
+        /// Checks Windows audio sessions for any non-target app that is actively
+        /// producing sound. This catches TTS, web audio, and anything else
+        /// invisible to GSMTC or the browser extension.
+        /// </summary>
+        private bool IsNonTargetAudioActive()
+        {
+            try
+            {
+                var activePids = _volumeMixer.GetActiveAudioPIDs();
+                var targetLower = _autoPlayAppName.ToLowerInvariant();
+
+                foreach (var pid in activePids)
+                {
+                    try
+                    {
+                        var name = Process.GetProcessById(pid).ProcessName;
+
+                        if (name.ToLowerInvariant().Contains(targetLower))
+                            continue;
+
+                        LoggingEngine.LogLine($"[AutoPlay] Active audio from {name} (PID {pid})",
+                            category: LoggingEngine.LogCategory.MediaControl,
+                            loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_DEBUG);
+                        return true;
+                    }
+                    catch
+                    {
+                        // Process may have exited
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingEngine.LogLine($"[AutoPlay] Audio mixer check failed: {ex.Message}",
+                    category: LoggingEngine.LogCategory.MediaControl,
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+            }
+
+            return false;
         }
 
         private bool IsTargetAppSession(MediaSessionInfo session)
