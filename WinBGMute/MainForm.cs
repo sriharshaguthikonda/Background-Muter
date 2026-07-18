@@ -665,13 +665,15 @@ namespace WinBGMuter
             SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
             CleanupPauseOnUnfocus();
 
+            // A modal dialog here blocks Windows shutdown/reboot/logoff (session-end).
+            // Never prompt on close: persist silently so the shutdown command passes through.
+            // Save directly (not via the button handler) — controls may be disposing.
             if (m_settingsChanged)
             {
-                var res = MessageBox.Show("Settings changed. Would you like to save?", "Saving...", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (res == DialogResult.Yes)
-                {
-                    SaveChangesButton_Click(sender, e);
-                }
+                _pauseSettings?.Save();
+                Properties.Settings.Default.Save();
+                SettingsFileStore.Save();
+                m_settingsChanged = false;
             }
         }
 
