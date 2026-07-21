@@ -670,10 +670,24 @@ namespace WinBGMuter
             // Save directly (not via the button handler) — controls may be disposing.
             if (m_settingsChanged)
             {
-                _pauseSettings?.Save();
-                Properties.Settings.Default.Save();
-                SettingsFileStore.Save();
-                m_settingsChanged = false;
+                try
+                {
+                    // _pauseSettings.Save() already persists both stores; don't double the I/O.
+                    if (_pauseSettings != null)
+                    {
+                        _pauseSettings.Save();
+                    }
+                    else
+                    {
+                        Properties.Settings.Default.Save();
+                        SettingsFileStore.Save();
+                    }
+                    m_settingsChanged = false;
+                }
+                catch
+                {
+                    // A save failure must never block Windows session-end.
+                }
             }
         }
 
@@ -963,6 +977,20 @@ along with this program.If not, see < https://www.gnu.org/licenses/>
             };
 
             LoggingEngine.LogLine(message, category: LoggingEngine.LogCategory.General);
+
+            if (e.Mode == PowerModes.Resume)
+            {
+                // Cached audio COM objects die across suspend. Rebuild the core-audio device
+                // and invalidate the GSMTC manager so AutoPlay keeps working after wake.
+                // Offload the COM rebuild — the SystemEvents monitoring thread must not block,
+                // and the audio service may not be ready the instant Resume fires (the 1s
+                // monitor tick retries via self-heal if this early rebuild still fails).
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try { m_volumeMixer?.ReloadAudio(true, silent: true); } catch { }
+                });
+                _appController?.OnSystemResumed();
+            }
         }
 
         private void MainForm_Shown(object sender, EventArgs e)

@@ -15,14 +15,8 @@ namespace WinBGMuter.Media
         public async Task<IReadOnlyList<MediaSessionInfo>> ListSessionsAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await EnsureManagerAsync().ConfigureAwait(false);
 
-            if (_manager == null)
-            {
-                return Array.Empty<MediaSessionInfo>();
-            }
-
-            var sessions = _manager.GetSessions();
+            var sessions = await GetSessionsResilientAsync().ConfigureAwait(false);
             var result = new List<MediaSessionInfo>(sessions.Count);
 
             foreach (var s in sessions)
@@ -125,7 +119,69 @@ namespace WinBGMuter.Media
                 return;
             }
 
-            _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+            try
+            {
+                _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
+            }
+            catch (Exception ex)
+            {
+                // Media session service may not be back yet (e.g. right after resume).
+                // Leave _manager null; the next tick retries.
+                _manager = null;
+                LoggingEngine.LogLine($"[GSMTC] RequestAsync failed: {ex.Message}; will retry",
+                    category: LoggingEngine.LogCategory.MediaControl,
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+            }
+        }
+
+        /// <summary>
+        /// Drops the cached session manager so the next call re-requests a live one.
+        /// The WinRT manager COM object dies across hibernate/resume and media-service
+        /// restarts; without this the controller throws forever until app restart.
+        /// </summary>
+        public void Invalidate()
+        {
+            _manager = null;
+        }
+
+        private async Task<IReadOnlyList<GlobalSystemMediaTransportControlsSession>> GetSessionsResilientAsync()
+        {
+            await EnsureManagerAsync().ConfigureAwait(false);
+            if (_manager == null)
+            {
+                return Array.Empty<GlobalSystemMediaTransportControlsSession>();
+            }
+
+            try
+            {
+                return _manager.GetSessions();
+            }
+            catch (Exception ex)
+            {
+                // Stale manager (dead after resume / service restart). Drop and re-request once.
+                LoggingEngine.LogLine($"[GSMTC] Session manager stale ({ex.Message}); re-requesting",
+                    category: LoggingEngine.LogCategory.MediaControl,
+                    loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+                _manager = null;
+                await EnsureManagerAsync().ConfigureAwait(false);
+                if (_manager == null)
+                {
+                    return Array.Empty<GlobalSystemMediaTransportControlsSession>();
+                }
+
+                try
+                {
+                    return _manager.GetSessions();
+                }
+                catch (Exception ex2)
+                {
+                    LoggingEngine.LogLine($"[GSMTC] Session manager still failing after re-request: {ex2.Message}",
+                        category: LoggingEngine.LogCategory.MediaControl,
+                        loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_ERROR);
+                    _manager = null;
+                    return Array.Empty<GlobalSystemMediaTransportControlsSession>();
+                }
+            }
         }
 
         private static MediaSessionKey BuildKey(GlobalSystemMediaTransportControlsSession session)
@@ -144,14 +200,13 @@ namespace WinBGMuter.Media
         private async Task<GlobalSystemMediaTransportControlsSession?> GetSessionAsync(MediaSessionKey key, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await EnsureManagerAsync().ConfigureAwait(false);
 
-            if (_manager == null)
+            var sessions = await GetSessionsResilientAsync().ConfigureAwait(false);
+            if (sessions.Count == 0)
             {
                 return null;
             }
 
-            var sessions = _manager.GetSessions();
             if (!string.IsNullOrWhiteSpace(key.SourceAppUserModelId))
             {
                 return sessions.FirstOrDefault(s => (s.SourceAppUserModelId ?? string.Empty) == key.SourceAppUserModelId);

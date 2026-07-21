@@ -120,6 +120,20 @@ namespace WinBGMuter.Controller
             LoggingEngine.LogLine("[AppController] Stopped", category: LoggingEngine.LogCategory.General);
         }
 
+        /// <summary>
+        /// Called on system resume from sleep/hibernate. Cached COM objects (GSMTC session
+        /// manager, core-audio endpoint) go stale across a suspend cycle; drop them so the
+        /// next monitor tick re-acquires live ones instead of throwing forever.
+        /// </summary>
+        public void OnSystemResumed()
+        {
+            _mediaController.Invalidate();
+            _autoPlayAppPausedByUs = false;
+            ResetCooldownWindow();
+            LoggingEngine.LogLine("[AppController] System resumed — invalidated media controller",
+                category: LoggingEngine.LogCategory.General);
+        }
+
         private void StartAutoPlayMonitor()
         {
             if (_autoPlayMonitorTimer != null)

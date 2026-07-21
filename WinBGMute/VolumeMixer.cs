@@ -100,6 +100,11 @@ namespace WinBGMuter
 
         private _AudioDevice AudioDevice;
 
+        // Serializes device rebuilds: resume (background Task), monitor-tick self-heal, and
+        // UI actions can all call ReloadAudio concurrently — without this they race on the
+        // AudioDevice COM fields.
+        private readonly object _reloadLock = new object();
+
 
         public void UnloadAudio(bool unloadDevice = false)
         {
@@ -158,8 +163,10 @@ namespace WinBGMuter
             ReloadAudio(false);
             return AudioDevice.volumeSessionList.Keys.ToArray<int>();
         }
-        public void ReloadAudio(bool reloadDevice = false)
+        public void ReloadAudio(bool reloadDevice = false, bool silent = false)
         {
+          lock (_reloadLock)
+          {
             try
             {
                 if (reloadDevice)
@@ -227,6 +234,16 @@ namespace WinBGMuter
                 }
             } catch (Exception ex)
             {
+                if (silent)
+                {
+                    // Background/resume path: device may not be ready yet. Don't pop a modal
+                    // dialog on wake — leave mgr null so the next caller retries the reload.
+                    AudioDevice.mgr = null;
+                    LoggingEngine.LogLine($"[!] Silent audio reload failed: {ex.Message}; will retry",
+                        loglevel: LoggingEngine.LOG_LEVEL_TYPE.LOG_WARNING);
+                    return;
+                }
+
                 var res = MessageBox.Show($"Audio Initiatlization failed: {ex.Message}", "Error", MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Error);
                 if (res  == DialogResult.Retry)
                 {
@@ -246,7 +263,7 @@ namespace WinBGMuter
                     System.Windows.Forms.Application.Exit();
                 }
             }
-
+          }
         }
         /// <summary>
         /// Returns PIDs that have an active audio session (currently producing sound).
@@ -258,7 +275,13 @@ namespace WinBGMuter
             var activePids = new List<int>();
             try
             {
-                if (AudioDevice.mgr == null) return Array.Empty<int>();
+                if (AudioDevice.mgr == null)
+                {
+                    // Endpoint torn down (resume / default-device change). Rebuild against
+                    // the current default device; next tick retries if still not ready.
+                    ReloadAudio(true, silent: true);
+                    if (AudioDevice.mgr == null) return Array.Empty<int>();
+                }
 
                 AudioDevice.mgr.GetSessionEnumerator(out var sessionEnum);
                 if (sessionEnum == null) return Array.Empty<int>();
@@ -285,7 +308,9 @@ namespace WinBGMuter
             }
             catch
             {
-                // Best-effort; return what we have
+                // mgr went stale mid-call (endpoint died). Drop it so the next tick rebuilds
+                // against the current default device instead of enumerating a dead endpoint.
+                try { ReloadAudio(true, silent: true); } catch { }
             }
             return activePids.ToArray();
         }
